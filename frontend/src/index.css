@@ -1,0 +1,158 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+
+  /* Warna utama mengikuti nuansa merah Telkom University */
+  --color-brand-50: #fef2f2;
+  --color-brand-100: #fde3e3;
+  --color-brand-200: #fccbcb;
+  --color-brand-300: #f8a5a6;
+  --color-brand-400: #f17073;
+  --color-brand-500: #e5444a;
+  --color-brand-600: #c8252c;
+  --color-brand-700: #a81d23;
+  --color-brand-800: #8b1c21;
+  --color-brand-900: #741d21;
+  --color-brand-950: #3f0a0d;
+
+  /* Bayangan berlapis yang lembut */
+  --shadow-soft: 0 1px 2px rgb(15 23 42 / 0.04), 0 4px 16px -6px rgb(15 23 42 / 0.08);
+  --shadow-lift: 0 2px 6px rgb(15 23 42 / 0.05), 0 16px 36px -12px rgb(15 23 42 / 0.2);
+  --shadow-glow: 0 10px 24px -10px rgb(225 29 72 / 0.7);
+  --shadow-glow-lg: 0 18px 40px -14px rgb(225 29 72 / 0.6);
+
+  /* Kanvas & bingkai aplikasi */
+  --color-shell: #0c0a1d;
+  --color-canvas: #f4f5fb;
+
+  /* Animasi */
+  --animate-fade-in: fade-in 0.3s ease-out both;
+  --animate-slide-up: slide-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-scale-in: scale-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-sheet-up: sheet-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-toast-in: toast-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-shimmer: shimmer 1.6s infinite;
+  --animate-float: float 14s ease-in-out infinite;
+  --animate-shrink: shrink linear forwards;
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes scale-in {
+    from { opacity: 0; transform: scale(0.96) translateY(6px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes sheet-up {
+    from { transform: translateY(100%); }
+    to { transform: none; }
+  }
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateY(-10px) scale(0.97); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes shimmer {
+    100% { transform: translateX(100%); }
+  }
+  @keyframes float {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(30px, -40px) scale(1.08); }
+    66% { transform: translate(-25px, 20px) scale(0.95); }
+  }
+  @keyframes shrink {
+    from { width: 100%; }
+    to { width: 0%; }
+  }
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-canvas text-slate-800 antialiased;
+  }
+
+  ::selection {
+    @apply bg-brand-100 text-brand-900;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(203 213 225) transparent;
+  }
+
+  /* Tabel data: baris lebih lega dan hover halus di seluruh aplikasi */
+  tbody tr {
+    @apply transition-colors;
+  }
+}
+
+@layer utilities {
+  /* Anak-anak elemen muncul bergantian (daftar kartu, statistik) */
+  .stagger > * {
+    animation: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .stagger > *:nth-child(2) { animation-delay: 60ms; }
+  .stagger > *:nth-child(3) { animation-delay: 120ms; }
+  .stagger > *:nth-child(4) { animation-delay: 180ms; }
+  .stagger > *:nth-child(5) { animation-delay: 240ms; }
+  .stagger > *:nth-child(6) { animation-delay: 300ms; }
+  .stagger > *:nth-child(n + 7) { animation-delay: 340ms; }
+
+  /* Gradasi merek: merah Telkom → rose → oranye */
+  .bg-brand-gradient {
+    background-image: linear-gradient(120deg, #e11d48 0%, #dc2626 45%, #f97316 100%);
+  }
+  .text-brand-gradient {
+    background-image: linear-gradient(100deg, #e11d48, #f97316);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Bingkai gelap aplikasi dengan cahaya warna-warni */
+  .bg-shell {
+    background-color: var(--color-shell);
+    background-image:
+      radial-gradient(60% 40% at 0% 0%, rgb(225 29 72 / 0.35), transparent 70%),
+      radial-gradient(50% 35% at 0% 100%, rgb(124 58 237 / 0.35), transparent 70%),
+      radial-gradient(40% 30% at 100% 0%, rgb(249 115 22 / 0.18), transparent 70%);
+  }
+
+  /* Kanvas konten terang dengan semburat warna lembut */
+  .bg-mesh {
+    background-color: var(--color-canvas);
+    background-image:
+      radial-gradient(40% 30% at 0% 0%, rgb(255 228 230 / 0.8), transparent 70%),
+      radial-gradient(35% 30% at 100% 0%, rgb(237 233 254 / 0.9), transparent 70%),
+      radial-gradient(40% 30% at 100% 100%, rgb(224 242 254 / 0.7), transparent 70%);
+    background-attachment: fixed;
+  }
+
+  /* Pola titik halus untuk bagian hero */
+  .bg-dots {
+    background-image: radial-gradient(rgb(255 255 255 / 0.18) 1px, transparent 1px);
+    background-size: 18px 18px;
+  }
+
+  .glass {
+    @apply bg-white/75 backdrop-blur-xl backdrop-saturate-150;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

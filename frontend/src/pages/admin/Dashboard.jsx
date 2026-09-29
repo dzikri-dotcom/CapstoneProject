@@ -1,0 +1,250 @@
+import { AlertTriangle, ArrowRight, CalendarClock, CalendarRange, QrCode, UserCheck, Users, Wallet } from 'lucide-react'
+import { Link } from 'react-router'
+import AttendanceBadges from '@/components/attendance/AttendanceBadges'
+import { CHART } from '@/components/charts/chartTheme'
+import Alert from '@/components/ui/Alert'
+import Avatar from '@/components/ui/Avatar'
+import Card from '@/components/ui/Card'
+import EmptyState from '@/components/ui/EmptyState'
+import Skeleton from '@/components/ui/Skeleton'
+import StatCard from '@/components/ui/StatCard'
+import useAuth from '@/hooks/useAuth'
+import useFetch from '@/hooks/useFetch'
+import useNow from '@/hooks/useNow'
+import { getErrorMessage } from '@/services/api'
+import { getAdminDashboard } from '@/services/reportService'
+import { firstName, formatDateRange, formatLongDate, formatShortDate } from '@/utils/format'
+
+function CardLink({ to, children }) {
+  return (
+    <Link to={to} className="group inline-flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-600 transition hover:bg-rose-100">
+      {children} <ArrowRight className="size-3.5 transition group-hover:translate-x-0.5" />
+    </Link>
+  )
+}
+
+function AttendanceBreakdown({ month }) {
+  const parts = [
+    ['Tepat waktu', month.on_time, CHART.onTime],
+    ['Terlambat', month.late, CHART.late],
+    ['Tidak hadir', month.absent, CHART.absent],
+  ]
+
+  if (!month.total) {
+    return <p className="text-sm text-slate-500">Belum ada shift yang berjalan bulan ini.</p>
+  }
+
+  return (
+    <div>
+      <p className="text-brand-gradient text-5xl font-extrabold tracking-tight tabular-nums">{month.rate.toLocaleString('id-ID')}%</p>
+      <p className="text-sm text-slate-500">tingkat kehadiran dari {month.total} shift</p>
+      <div className="mt-4 flex h-3 gap-0.5 overflow-hidden rounded-full" role="img" aria-label="Komposisi kehadiran bulan ini">
+        {parts.map(([label, value, color]) =>
+          value ? <span key={label} style={{ width: `${(value / month.total) * 100}%`, background: color }} /> : null,
+        )}
+      </div>
+      <ul className="mt-3 space-y-1 text-sm">
+        {parts.map(([label, value, color]) => (
+          <li key={label} className="flex items-center gap-2">
+            <span className="size-2.5 rounded-sm" style={{ background: color }} />
+            <span className="text-slate-600">{label}</span>
+            <span className="ml-auto font-medium text-slate-800 tabular-nums">{value}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function greeting(hour) {
+  if (hour < 11) return 'pagi'
+  if (hour < 15) return 'siang'
+  if (hour < 18) return 'sore'
+  return 'malam'
+}
+
+const clockFormatter = new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit' })
+
+function Hero({ name, data }) {
+  const now = useNow(1000)
+  const actions = [
+    { to: '/admin/qr', label: 'Layar QR', icon: QrCode, primary: true },
+    { to: '/admin/jadwal', label: 'Jadwal shift', icon: CalendarRange },
+    { to: '/admin/penggajian', label: 'Penggajian', icon: Wallet },
+  ]
+
+  return (
+    <section className="bg-brand-gradient relative mb-6 overflow-hidden rounded-[26px] p-6 text-white shadow-glow-lg sm:p-8">
+      <div className="bg-dots absolute inset-0 [mask-image:linear-gradient(to_right,transparent,black)]" aria-hidden="true" />
+      <div className="absolute -top-28 right-1/4 size-80 animate-float rounded-full bg-fuchsia-600/50 blur-3xl" aria-hidden="true" />
+      <div className="absolute -bottom-28 -left-10 size-72 animate-float rounded-full bg-amber-300/40 blur-3xl [animation-delay:-6s]" aria-hidden="true" />
+      <div className="absolute -top-16 -right-16 size-64 rounded-full border-[28px] border-white/10" aria-hidden="true" />
+      <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold ring-1 ring-white/25 backdrop-blur">{formatLongDate(now)}</p>
+          <h1 className="mt-3 text-2xl font-extrabold tracking-tight sm:text-[2rem]">
+            Selamat {greeting(now.getHours())}, {firstName(name)} 👋
+          </h1>
+          {data ? (
+            <p className="mt-2 text-sm text-white/85">
+              <strong className="text-white">{data.on_duty.length}</strong> staff sedang bertugas ·{' '}
+              <strong className="text-white">{data.today_shift_count}</strong> shift hari ini ·{' '}
+              <strong className={data.understaffed.length ? 'text-amber-200' : 'text-white'}>{data.understaffed.length}</strong> slot kurang staff
+            </p>
+          ) : (
+            <Skeleton className="mt-3 h-4 w-72 bg-white/10" />
+          )}
+          <div className="mt-5 flex flex-wrap gap-2">
+            {actions.map(({ to, label, icon: Icon, primary }) => (
+              <Link
+                key={to}
+                to={to}
+                className={
+                  primary
+                    ? 'inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-rose-600 shadow-lg shadow-rose-900/20 transition hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.97]'
+                    : 'inline-flex items-center gap-2 rounded-xl bg-white/15 px-4 py-2.5 text-sm font-semibold text-white ring-1 ring-white/30 backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/25 active:scale-[0.97]'
+                }
+              >
+                <Icon className="size-4" /> {label}
+              </Link>
+            ))}
+          </div>
+        </div>
+        <div className="hidden self-start rounded-3xl bg-white/15 px-6 py-4 sm:block text-left ring-1 ring-white/25 backdrop-blur-md lg:self-auto lg:text-right">
+          <p className="text-5xl font-extrabold tracking-tight tabular-nums sm:text-6xl">{clockFormatter.format(now)}</p>
+          <p className="mt-1 text-xs font-medium text-white/75">WIB · Unit Logistik Tel-U Surabaya</p>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+export default function Dashboard() {
+  const { user } = useAuth()
+  const { data, loading, error } = useFetch(getAdminDashboard)
+
+  if (!data) {
+    return (
+      <>
+        <Hero name={user.name} />
+        {loading ? (
+          <div className="stagger grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+            {[1, 2, 3, 4].map((key) => (
+              <Skeleton key={key} className="h-[108px] rounded-[20px]" />
+            ))}
+          </div>
+        ) : (
+          <Alert variant="error">{getErrorMessage(error)}</Alert>
+        )}
+      </>
+    )
+  }
+
+  return (
+    <>
+      <Hero name={user.name} data={data} />
+
+      <div className="stagger grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+        <StatCard icon={Users} label="Staff aktif" value={data.active_staff} tone="blue" />
+        <StatCard icon={CalendarClock} label="Shift hari ini" value={data.today_shift_count} hint="slot yang dipublikasikan" tone="violet" />
+        <StatCard icon={UserCheck} label="Sedang bertugas" value={data.on_duty.length} tone="green" />
+        <StatCard icon={AlertTriangle} label="Slot kurang staff" value={data.understaffed.length} hint="14 hari ke depan" tone={data.understaffed.length ? 'amber' : 'gray'} />
+      </div>
+
+      <div className="mt-6 grid gap-6 xl:grid-cols-3">
+        <div className="space-y-6 xl:col-span-2">
+          <Card title="Sedang bertugas" actions={<CardLink to="/admin/presensi">Monitoring</CardLink>}>
+            {data.on_duty.length ? (
+              <ul className="grid gap-3 sm:grid-cols-2">
+                {data.on_duty.map((staff) => (
+                  <li key={staff.name} className="flex items-center gap-3 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 p-3 ring-1 ring-emerald-100">
+                    <Avatar name={staff.name} size="sm" />
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-slate-900">{staff.name}</p>
+                      <p className="text-xs text-slate-500 tabular-nums">
+                        Shift {staff.shift} · masuk {staff.check_in_time}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-slate-500">Tidak ada staff yang sedang check-in saat ini.</p>
+            )}
+          </Card>
+
+          <Card title="Shift hari ini" bodyClassName="p-0">
+            {data.today_slots.length ? (
+              <ul className="divide-y divide-slate-100">
+                {data.today_slots.map((slot) => (
+                  <li key={slot.start_time} className="flex flex-col gap-2 px-5 py-3 sm:flex-row sm:items-start">
+                    <p className="w-28 shrink-0 pt-0.5 font-medium text-slate-700 tabular-nums">
+                      {slot.start_time}–{slot.end_time}
+                    </p>
+                    <ul className="flex-1 space-y-1.5">
+                      {slot.staff.map((item) => (
+                        <li key={item.assignment_id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                          <span className="text-slate-800">{item.staff?.name}</span>
+                          <AttendanceBadges item={item} />
+                        </li>
+                      ))}
+                      {slot.staff.length < slot.required_staff && (
+                        <li className="text-xs font-medium text-red-600">Kurang {slot.required_staff - slot.staff.length} staff</li>
+                      )}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <EmptyState icon={CalendarClock} title="Tidak ada shift hari ini" description="Belum ada jadwal dipublikasikan untuk hari ini." />
+            )}
+          </Card>
+        </div>
+
+        <div className="space-y-6">
+          <Card title="Kehadiran bulan ini" actions={<CardLink to="/admin/laporan/kehadiran">Rekap</CardLink>}>
+            <AttendanceBreakdown month={data.month_attendance} />
+          </Card>
+
+          <Card title="Slot kurang staff" actions={<CardLink to="/admin/jadwal">Jadwal</CardLink>}>
+            {data.understaffed.length ? (
+              <ul className="space-y-2">
+                {data.understaffed.slice(0, 6).map((slot) => (
+                  <li key={slot.id}>
+                    <Link
+                      to={`/admin/jadwal/${slot.schedule_period_id}`}
+                      className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-slate-50"
+                    >
+                      <span className="text-slate-700">
+                        {formatShortDate(slot.date)} · {slot.start_time}–{slot.end_time}
+                      </span>
+                      <span className="text-xs font-medium text-red-600">kurang {slot.missing}</span>
+                    </Link>
+                  </li>
+                ))}
+                {data.understaffed.length > 6 && <li className="px-2 text-xs text-slate-500">+{data.understaffed.length - 6} slot lainnya</li>}
+              </ul>
+            ) : (
+              <p className="text-sm text-slate-500">Semua slot 14 hari ke depan sudah terisi.</p>
+            )}
+          </Card>
+
+          <Card title="Penjadwalan">
+            <dl className="space-y-2 text-sm">
+              <div className="flex justify-between gap-3">
+                <dt className="text-slate-500">Periode terbaru</dt>
+                <dd className="text-right font-medium text-slate-800">
+                  {data.latest_period ? formatDateRange(data.latest_period.start_date, data.latest_period.end_date) : '—'}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-slate-500">Antrian berikutnya mulai dari</dt>
+                <dd className="text-right font-medium text-slate-800">{data.next_pointer ?? 'staff pertama'}</dd>
+              </div>
+            </dl>
+          </Card>
+        </div>
+      </div>
+    </>
+  )
+}

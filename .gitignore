@@ -1,0 +1,21 @@
+# Rahasia & konfigurasi lokal
+.env
+.env.*
+!.env.example
+!frontend/.env.lan
+
+# Dependensi & hasil build
+node_modules/
+vendor/
+dist/
+
+# Log & cache
+*.log
+.phpunit.result.cache
+
+# Editor / OS
+.idea/
+.vscode/
+.claude/
+.DS_Store
+Thumbs.db

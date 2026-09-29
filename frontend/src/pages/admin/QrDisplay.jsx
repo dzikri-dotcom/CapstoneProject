@@ -92,7 +92,7 @@ export default function QrDisplay() {
   const shown = active.length ? active : upcoming ? [upcoming] : []
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-brand-700 via-brand-800 to-brand-950 text-white">
+    <div className="min-h-screen bg-slate-950 text-white">
       <header className="flex items-center justify-between px-6 py-4">
         <Logo inverted />
         <div className="flex items-center gap-2">
@@ -113,7 +113,7 @@ export default function QrDisplay() {
       </header>
 
       <main className="mx-auto grid max-w-6xl gap-6 px-4 pb-10 sm:px-6 lg:grid-cols-[1.25fr_1fr] lg:items-start">
-        <section className="rounded-3xl bg-white p-6 text-center text-slate-900 shadow-2xl sm:p-10">
+        <section className="rounded-2xl bg-white p-6 text-center text-slate-900 shadow-2xl sm:p-10">
           <h1 className="text-2xl font-semibold sm:text-3xl">Scan untuk presensi</h1>
           <p className="mt-2 text-slate-500">
             Buka menu <strong>Presensi</strong> di aplikasi atau kamera HP, lalu arahkan ke QR ini.
@@ -144,12 +144,12 @@ export default function QrDisplay() {
         </section>
 
         <aside className="space-y-6">
-          <div className="rounded-3xl bg-white/10 p-6 ring-1 ring-white/15">
+          <div className="rounded-2xl bg-white/[0.06] p-6 ring-1 ring-white/10">
             <p className="text-5xl font-semibold tracking-tight tabular-nums">{clockFormatter.format(current)}</p>
             <p className="mt-1 text-white/70">{formatLongDate(current)}</p>
           </div>
 
-          <div className="rounded-3xl bg-white p-6 text-slate-900 shadow-xl">
+          <div className="rounded-2xl bg-white p-6 text-slate-900 shadow-xl">
             <h2 className="font-semibold">{active.length ? 'Shift saat ini' : 'Shift berikutnya hari ini'}</h2>
             {shown.length === 0 ? (
               <p className="mt-2 text-sm text-slate-500">Tidak ada shift lagi hari ini.</p>

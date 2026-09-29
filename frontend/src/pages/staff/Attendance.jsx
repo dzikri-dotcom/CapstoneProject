@@ -31,7 +31,7 @@ function extractToken(text) {
 function ShiftSummary({ item, children }) {
   return (
     <div className="flex items-start gap-4">
-      <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-brand-gradient text-white shadow-glow">
+      <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
         <CalendarClock className="size-6" />
       </div>
       <div className="min-w-0 flex-1">

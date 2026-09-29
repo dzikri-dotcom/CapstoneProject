@@ -7,16 +7,16 @@ const sizes = {
   lg: 'size-14 text-lg',
 }
 
-/** Warna avatar dipilih dari nama agar setiap orang konsisten punya warnanya sendiri. */
+/** Warna lembut dipilih dari nama agar setiap orang konsisten punya warnanya sendiri. */
 const palettes = [
-  'from-rose-400 to-red-500',
-  'from-orange-400 to-amber-500',
-  'from-emerald-400 to-teal-500',
-  'from-sky-400 to-blue-500',
-  'from-violet-400 to-purple-500',
-  'from-pink-400 to-fuchsia-500',
-  'from-cyan-400 to-sky-500',
-  'from-indigo-400 to-violet-500',
+  'bg-rose-100 text-rose-700',
+  'bg-amber-100 text-amber-800',
+  'bg-emerald-100 text-emerald-700',
+  'bg-sky-100 text-sky-700',
+  'bg-indigo-100 text-indigo-700',
+  'bg-teal-100 text-teal-700',
+  'bg-orange-100 text-orange-700',
+  'bg-slate-200 text-slate-700',
 ]
 
 function paletteFor(name = '') {
@@ -28,12 +28,7 @@ function paletteFor(name = '') {
 export default function Avatar({ name, size = 'md', className }) {
   return (
     <span
-      className={cn(
-        'inline-flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br font-bold text-white shadow-sm ring-2 ring-white',
-        paletteFor(name),
-        sizes[size],
-        className,
-      )}
+      className={cn('inline-flex shrink-0 items-center justify-center rounded-full font-semibold', paletteFor(name), sizes[size], className)}
       aria-hidden="true"
     >
       {initials(name)}

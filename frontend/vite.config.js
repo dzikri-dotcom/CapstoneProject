@@ -18,10 +18,10 @@ export default defineConfig(({ mode }) => ({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
-  // Pemindai QR dimuat secara lazy; disiapkan sejak server dev menyala agar
+  // Pemindai QR & grafik dimuat secara lazy; disiapkan sejak server dev menyala agar
   // pemuatan pertamanya tidak memicu reload halaman.
   optimizeDeps: {
-    include: ['html5-qrcode'],
+    include: ['html5-qrcode', 'recharts', 'qrcode.react'],
   },
   server: {
     // Port dikunci agar selalu cocok dengan FRONTEND_URL di CORS backend.

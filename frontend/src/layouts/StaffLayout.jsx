@@ -16,33 +16,33 @@ const navItems = [
 ]
 
 /**
- * Layout staff dirancang untuk HP: header kaca + menu navigasi melayang di bawah layar.
+ * Layout staff dirancang untuk HP: header ringkas + menu navigasi di bawah layar.
  */
 export default function StaffLayout() {
   const { user } = useAuth()
   const location = useLocation()
 
   return (
-    <div className="bg-mesh min-h-screen">
-      <header className="glass sticky top-0 z-30 border-b border-slate-200/60">
-        <div className="mx-auto flex h-16 max-w-xl items-center justify-between px-4">
+    <div className="min-h-screen bg-canvas">
+      <header className="sticky top-0 z-30 border-b border-slate-200/70 bg-white/90 backdrop-blur-md">
+        <div className="mx-auto flex h-14 max-w-xl items-center justify-between px-4">
           <Logo compact />
-          <Link to="/staff/profil" aria-label="Akun saya" className="rounded-full ring-2 ring-white transition hover:ring-brand-200">
+          <Link to="/staff/profil" aria-label="Akun saya" className="rounded-full transition-opacity hover:opacity-80">
             <Avatar name={user.name} size="sm" />
           </Link>
         </div>
       </header>
 
-      <main className="mx-auto max-w-xl px-4 pt-5 pb-32">
+      <main className="mx-auto max-w-xl px-4 pt-5 pb-28">
         <Suspense fallback={<PageLoader />}>
-          <div key={location.pathname} className="animate-slide-up">
+          <div key={location.pathname} className="animate-rise">
             <Outlet />
           </div>
         </Suspense>
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        <ul className="glass mx-auto grid max-w-md grid-cols-5 rounded-3xl border border-white/70 shadow-lift ring-1 ring-slate-900/5">
+      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/80 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md">
+        <ul className="mx-auto grid h-16 max-w-md grid-cols-5">
           {navItems.map(({ to, label, icon: Icon, end, primary }) => (
             <li key={to}>
               <NavLink
@@ -50,8 +50,8 @@ export default function StaffLayout() {
                 end={end}
                 className={({ isActive }) =>
                   cn(
-                    'relative flex flex-col items-center gap-1 pt-2.5 pb-2 text-[11px] font-semibold transition',
-                    isActive ? 'text-rose-600' : 'text-slate-400 hover:text-slate-700',
+                    'relative flex h-full flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors',
+                    isActive ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600',
                   )
                 }
               >
@@ -60,19 +60,21 @@ export default function StaffLayout() {
                     <>
                       <span
                         className={cn(
-                          'bg-brand-gradient -mt-7 flex size-14 items-center justify-center rounded-2xl text-white shadow-glow-lg ring-4 ring-white transition active:scale-95',
-                          isActive && 'scale-105',
+                          '-mt-5 flex size-12 items-center justify-center rounded-full bg-brand-600 text-white shadow-pop ring-4 ring-white transition-transform active:scale-95',
+                          isActive && 'bg-brand-700',
                         )}
                       >
-                        <Icon className="size-6" />
+                        <Icon className="size-5" />
                       </span>
                       {label}
                     </>
                   ) : (
                     <>
-                      <span className={cn('flex h-7 w-12 items-center justify-center rounded-full transition-all duration-300', isActive && 'bg-gradient-to-r from-rose-100 to-orange-100')}>
-                        <Icon className={cn('size-5 transition', isActive && 'scale-110')} />
-                      </span>
+                      <span
+                        className={cn('absolute top-0 h-0.5 w-8 rounded-b-full bg-brand-600 transition-opacity', isActive ? 'opacity-100' : 'opacity-0')}
+                        aria-hidden="true"
+                      />
+                      <Icon className="size-5" strokeWidth={isActive ? 2.2 : 1.8} />
                       {label}
                     </>
                   )

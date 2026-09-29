@@ -55,7 +55,7 @@ export default function AttendanceMonitor() {
         actions={
           <Link
             to="/admin/qr"
-            className="inline-flex items-center gap-2 rounded-xl bg-brand-gradient px-4 py-2.5 text-sm font-semibold text-white shadow-glow transition hover:shadow-glow active:scale-[0.97]"
+            className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand-600 px-3.5 text-sm font-medium text-white shadow-card transition-colors hover:bg-brand-700"
           >
             <QrCode className="size-4" /> Buka layar QR
           </Link>
@@ -72,7 +72,7 @@ export default function AttendanceMonitor() {
             aria-label="Tanggal"
             value={date}
             onChange={(event) => event.target.value && setDate(event.target.value)}
-            className={cn(fieldClass(false), 'py-2')}
+            className={fieldClass(false)}
           />
         </div>
         <Button variant="secondary" size="icon" onClick={() => setDate(addDaysISO(date, 1))} aria-label="Hari berikutnya">
@@ -95,7 +95,7 @@ export default function AttendanceMonitor() {
               onClick={() => setFilter(item.key)}
               className={cn(
                 'rounded-full px-3 py-1.5 text-sm font-medium ring-1 transition',
-                filter === item.key ? 'bg-brand-gradient text-white ring-transparent shadow-glow' : 'bg-white text-slate-600 ring-slate-200 hover:ring-slate-400',
+                filter === item.key ? 'bg-slate-900 text-white ring-slate-900' : 'bg-white text-slate-600 ring-slate-200 hover:ring-slate-400',
               )}
             >
               {item.label}
@@ -107,7 +107,7 @@ export default function AttendanceMonitor() {
         </div>
       )}
 
-      <div className="rounded-2xl border border-slate-200/70 bg-white shadow-soft">
+      <div className="rounded-xl border border-slate-200/80 bg-white shadow-card">
         {error && !data && (
           <div className="p-4">
             <Alert variant="error">{getErrorMessage(error)}</Alert>

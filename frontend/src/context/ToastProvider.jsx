@@ -4,10 +4,10 @@ import cn from '@/utils/cn'
 import ToastContext from './ToastContext'
 
 const styles = {
-  success: { icon: CheckCircle2, color: 'text-emerald-600', bar: 'bg-emerald-500', ring: 'bg-emerald-50' },
-  error: { icon: XCircle, color: 'text-red-600', bar: 'bg-red-500', ring: 'bg-red-50' },
-  warning: { icon: AlertTriangle, color: 'text-amber-500', bar: 'bg-amber-400', ring: 'bg-amber-50' },
-  info: { icon: Info, color: 'text-sky-600', bar: 'bg-sky-500', ring: 'bg-sky-50' },
+  success: { icon: CheckCircle2, color: 'text-emerald-600', bar: 'bg-emerald-500' },
+  error: { icon: XCircle, color: 'text-red-600', bar: 'bg-red-500' },
+  warning: { icon: AlertTriangle, color: 'text-amber-500', bar: 'bg-amber-400' },
+  info: { icon: Info, color: 'text-sky-600', bar: 'bg-sky-500' },
 }
 
 /**
@@ -50,28 +50,26 @@ export default function ToastProvider({ children }) {
         className="pointer-events-none fixed inset-x-4 top-4 z-[60] flex flex-col items-center gap-2 sm:inset-x-auto sm:right-4 sm:items-end"
       >
         {toasts.map(({ id, type, message, duration }) => {
-          const { icon: Icon, color, bar, ring } = styles[type]
+          const { icon: Icon, color, bar } = styles[type]
           return (
             <div
               key={id}
               role="status"
-              className="glass pointer-events-auto relative w-full max-w-sm animate-toast-in overflow-hidden rounded-2xl border border-white/60 shadow-lift ring-1 ring-slate-900/5"
+              className="pointer-events-auto relative w-full max-w-sm animate-toast-in overflow-hidden rounded-xl border border-slate-200 bg-white shadow-pop"
             >
-              <div className="flex items-start gap-3 p-4 text-sm">
-                <span className={cn('flex size-8 shrink-0 items-center justify-center rounded-full', ring)}>
-                  <Icon className={cn('size-5', color)} />
-                </span>
-                <p className="flex-1 pt-1 text-slate-700">{message}</p>
+              <div className="flex items-start gap-3 px-4 py-3 text-sm">
+                <Icon className={cn('mt-0.5 size-4 shrink-0', color)} />
+                <p className="flex-1 text-slate-700">{message}</p>
                 <button
                   type="button"
                   onClick={() => dismiss(id)}
-                  className="rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                  className="-mt-0.5 -mr-1 rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
                   aria-label="Tutup notifikasi"
                 >
-                  <X className="size-4" />
+                  <X className="size-3.5" />
                 </button>
               </div>
-              <div className={cn('h-0.5 animate-shrink', bar)} style={{ animationDuration: `${duration}ms` }} />
+              <div className={cn('h-px animate-shrink opacity-60', bar)} style={{ animationDuration: `${duration}ms` }} />
             </div>
           )
         })}

@@ -6,6 +6,7 @@ import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
 import PageHeader from '@/components/ui/PageHeader'
+import SegmentedControl from '@/components/ui/SegmentedControl'
 import Spinner from '@/components/ui/Spinner'
 import StatCard from '@/components/ui/StatCard'
 import useFetch from '@/hooks/useFetch'
@@ -107,7 +108,7 @@ export default function SchedulerLog() {
         }
       />
 
-      <div className="stagger grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard icon={ScanSearch} tone="blue" label="Total pengecekan" value={summary.checks} hint="Staff yang ditunjuk pointer" />
         <StatCard icon={UserCheck} tone="green" label="Ditugaskan" value={summary.assigned} />
         <StatCard
@@ -125,7 +126,7 @@ export default function SchedulerLog() {
           <ol className="flex flex-wrap gap-2">
             {queue.meta.names.map((name, index) => (
               <li key={queue.meta.queue[index]} className="flex items-center gap-2 rounded-full bg-slate-100 py-1 pr-3 pl-1 text-sm">
-                <span className="flex size-6 items-center justify-center rounded-full bg-white text-xs font-semibold text-slate-600 shadow-xs">
+                <span className="flex size-6 items-center justify-center rounded-full bg-white text-xs font-semibold text-slate-600 shadow-card">
                   {index + 1}
                 </span>
                 {name}
@@ -135,20 +136,8 @@ export default function SchedulerLog() {
         </Card>
       )}
 
-      <div className="mt-6 mb-4 flex gap-1 rounded-lg bg-slate-100 p-1 sm:inline-flex">
-        {FILTERS.map((item) => (
-          <button
-            key={item.value}
-            type="button"
-            onClick={() => setFilter(item.value)}
-            className={cn(
-              'flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition sm:flex-none',
-              filter === item.value ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800',
-            )}
-          >
-            {item.label}
-          </button>
-        ))}
+      <div className="mt-6 mb-4">
+        <SegmentedControl aria-label="Filter slot" options={FILTERS} value={filter} onChange={setFilter} />
       </div>
 
       <div className="space-y-4">

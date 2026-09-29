@@ -17,8 +17,8 @@ import { firstName, formatDateRange, formatLongDate, formatShortDate } from '@/u
 
 function CardLink({ to, children }) {
   return (
-    <Link to={to} className="group inline-flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-600 transition hover:bg-rose-100">
-      {children} <ArrowRight className="size-3.5 transition group-hover:translate-x-0.5" />
+    <Link to={to} className="group inline-flex items-center gap-1 text-[13px] font-medium text-slate-500 transition-colors hover:text-slate-900">
+      {children} <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
     </Link>
   )
 }
@@ -36,7 +36,7 @@ function AttendanceBreakdown({ month }) {
 
   return (
     <div>
-      <p className="text-brand-gradient text-5xl font-extrabold tracking-tight tabular-nums">{month.rate.toLocaleString('id-ID')}%</p>
+      <p className="text-3xl font-semibold tracking-tight text-slate-900 tabular-nums">{month.rate.toLocaleString('id-ID')}%</p>
       <p className="text-sm text-slate-500">tingkat kehadiran dari {month.total} shift</p>
       <div className="mt-4 flex h-3 gap-0.5 overflow-hidden rounded-full" role="img" aria-label="Komposisi kehadiran bulan ini">
         {parts.map(([label, value, color]) =>
@@ -63,59 +63,51 @@ function greeting(hour) {
   return 'malam'
 }
 
+const secondaryLink =
+  'inline-flex h-9 items-center gap-2 rounded-lg bg-white px-3.5 text-sm font-medium text-slate-700 shadow-card ring-1 ring-slate-200 ring-inset transition-colors hover:bg-slate-50 hover:text-slate-900'
+
 const clockFormatter = new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit' })
 
 function Hero({ name, data }) {
   const now = useNow(1000)
-  const actions = [
-    { to: '/admin/qr', label: 'Layar QR', icon: QrCode, primary: true },
-    { to: '/admin/jadwal', label: 'Jadwal shift', icon: CalendarRange },
-    { to: '/admin/penggajian', label: 'Penggajian', icon: Wallet },
-  ]
 
   return (
-    <section className="bg-brand-gradient relative mb-6 overflow-hidden rounded-[26px] p-6 text-white shadow-glow-lg sm:p-8">
-      <div className="bg-dots absolute inset-0 [mask-image:linear-gradient(to_right,transparent,black)]" aria-hidden="true" />
-      <div className="absolute -top-28 right-1/4 size-80 animate-float rounded-full bg-fuchsia-600/50 blur-3xl" aria-hidden="true" />
-      <div className="absolute -bottom-28 -left-10 size-72 animate-float rounded-full bg-amber-300/40 blur-3xl [animation-delay:-6s]" aria-hidden="true" />
-      <div className="absolute -top-16 -right-16 size-64 rounded-full border-[28px] border-white/10" aria-hidden="true" />
-      <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold ring-1 ring-white/25 backdrop-blur">{formatLongDate(now)}</p>
-          <h1 className="mt-3 text-2xl font-extrabold tracking-tight sm:text-[2rem]">
-            Selamat {greeting(now.getHours())}, {firstName(name)} 👋
-          </h1>
-          {data ? (
-            <p className="mt-2 text-sm text-white/85">
-              <strong className="text-white">{data.on_duty.length}</strong> staff sedang bertugas ·{' '}
-              <strong className="text-white">{data.today_shift_count}</strong> shift hari ini ·{' '}
-              <strong className={data.understaffed.length ? 'text-amber-200' : 'text-white'}>{data.understaffed.length}</strong> slot kurang staff
-            </p>
-          ) : (
-            <Skeleton className="mt-3 h-4 w-72 bg-white/10" />
-          )}
-          <div className="mt-5 flex flex-wrap gap-2">
-            {actions.map(({ to, label, icon: Icon, primary }) => (
-              <Link
-                key={to}
-                to={to}
-                className={
-                  primary
-                    ? 'inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-rose-600 shadow-lg shadow-rose-900/20 transition hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.97]'
-                    : 'inline-flex items-center gap-2 rounded-xl bg-white/15 px-4 py-2.5 text-sm font-semibold text-white ring-1 ring-white/30 backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/25 active:scale-[0.97]'
-                }
-              >
-                <Icon className="size-4" /> {label}
-              </Link>
-            ))}
-          </div>
-        </div>
-        <div className="hidden self-start rounded-3xl bg-white/15 px-6 py-4 sm:block text-left ring-1 ring-white/25 backdrop-blur-md lg:self-auto lg:text-right">
-          <p className="text-5xl font-extrabold tracking-tight tabular-nums sm:text-6xl">{clockFormatter.format(now)}</p>
-          <p className="mt-1 text-xs font-medium text-white/75">WIB · Unit Logistik Tel-U Surabaya</p>
-        </div>
+    <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <p className="flex items-center gap-2 text-[13px] text-slate-500">
+          {formatLongDate(now)}
+          <span className="size-1 rounded-full bg-slate-300" aria-hidden="true" />
+          <span className="font-medium text-slate-700 tabular-nums">{clockFormatter.format(now)} WIB</span>
+        </p>
+        <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+          Selamat {greeting(now.getHours())}, {firstName(name)}
+        </h1>
+        {data ? (
+          <p className="mt-1 text-sm text-slate-500">
+            {data.on_duty.length} staff sedang bertugas · {data.today_shift_count} shift hari ini ·{' '}
+            <span className={data.understaffed.length ? 'font-medium text-amber-700' : undefined}>
+              {data.understaffed.length} slot kurang staff
+            </span>
+          </p>
+        ) : (
+          <Skeleton className="mt-2 h-4 w-72" />
+        )}
       </div>
-    </section>
+      <div className="flex flex-wrap gap-2">
+        <Link to="/admin/jadwal" className={secondaryLink}>
+          <CalendarRange className="size-4 text-slate-400" /> Jadwal shift
+        </Link>
+        <Link to="/admin/penggajian" className={secondaryLink}>
+          <Wallet className="size-4 text-slate-400" /> Penggajian
+        </Link>
+        <Link
+          to="/admin/qr"
+          className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand-600 px-3.5 text-sm font-medium text-white shadow-card transition-colors hover:bg-brand-700"
+        >
+          <QrCode className="size-4" /> Buka layar QR
+        </Link>
+      </div>
+    </div>
   )
 }
 
@@ -128,9 +120,9 @@ export default function Dashboard() {
       <>
         <Hero name={user.name} />
         {loading ? (
-          <div className="stagger grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
             {[1, 2, 3, 4].map((key) => (
-              <Skeleton key={key} className="h-[108px] rounded-[20px]" />
+              <Skeleton key={key} className="h-[106px] rounded-xl" />
             ))}
           </div>
         ) : (
@@ -144,7 +136,7 @@ export default function Dashboard() {
     <>
       <Hero name={user.name} data={data} />
 
-      <div className="stagger grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard icon={Users} label="Staff aktif" value={data.active_staff} tone="blue" />
         <StatCard icon={CalendarClock} label="Shift hari ini" value={data.today_shift_count} hint="slot yang dipublikasikan" tone="violet" />
         <StatCard icon={UserCheck} label="Sedang bertugas" value={data.on_duty.length} tone="green" />
@@ -157,7 +149,7 @@ export default function Dashboard() {
             {data.on_duty.length ? (
               <ul className="grid gap-3 sm:grid-cols-2">
                 {data.on_duty.map((staff) => (
-                  <li key={staff.name} className="flex items-center gap-3 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 p-3 ring-1 ring-emerald-100">
+                  <li key={staff.name} className="flex items-center gap-3 rounded-lg border border-slate-200 p-3">
                     <Avatar name={staff.name} size="sm" />
                     <div className="min-w-0">
                       <p className="truncate font-medium text-slate-900">{staff.name}</p>

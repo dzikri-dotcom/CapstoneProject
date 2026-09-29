@@ -18,7 +18,7 @@ export default function Textarea({ label, error, hint, required, className, rows
         rows={rows}
         required={required}
         aria-invalid={Boolean(error)}
-        className={cn(fieldClass(error), 'resize-y')}
+        className={cn(fieldClass(error), 'h-auto resize-y py-2')}
         {...props}
       />
       <FieldMessage error={error} hint={hint} />

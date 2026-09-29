@@ -44,7 +44,7 @@ export default function PayrollPeriods() {
         </p>
       </div>
 
-      <div className="rounded-2xl border border-slate-200/70 bg-white shadow-soft">
+      <div className="rounded-xl border border-slate-200/80 bg-white shadow-card">
         {error && !data && (
           <div className="p-4">
             <Alert variant="error">{getErrorMessage(error)}</Alert>
@@ -73,7 +73,7 @@ export default function PayrollPeriods() {
             {periods.map((period) => (
               <li key={period.id}>
                 <Link to={`/admin/penggajian/${period.id}`} className="flex items-center gap-4 px-5 py-4 transition hover:bg-slate-50">
-                  <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-md shadow-amber-500/30">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-card">
                     <Wallet className="size-5" />
                   </div>
                   <div className="min-w-0 flex-1">

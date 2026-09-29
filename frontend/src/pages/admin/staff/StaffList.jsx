@@ -11,6 +11,7 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import EmptyState from '@/components/ui/EmptyState'
 import PageHeader from '@/components/ui/PageHeader'
 import Pagination from '@/components/ui/Pagination'
+import SegmentedControl from '@/components/ui/SegmentedControl'
 import { SkeletonRows } from '@/components/ui/Skeleton'
 import useDebounce from '@/hooks/useDebounce'
 import useFetch from '@/hooks/useFetch'
@@ -31,7 +32,7 @@ function StatusBadge({ active }) {
 
 function IconAction({ icon: Icon, label, onClick, to, danger }) {
   const className = cn(
-    'rounded-lg p-2 transition',
+    'rounded-md p-1.5 transition-colors',
     danger ? 'text-slate-400 hover:bg-red-50 hover:text-red-600' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700',
   )
   if (to) {
@@ -133,28 +134,18 @@ export default function StaffList() {
         }
       />
 
-      <div className="rounded-2xl border border-slate-200/70 bg-white shadow-soft">
+      <div className="rounded-xl border border-slate-200/80 bg-white shadow-card">
         {/* Filter */}
         <div className="flex flex-col gap-3 border-b border-slate-100 p-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex gap-1 rounded-lg bg-slate-100 p-1">
-            {STATUS_TABS.map((tab) => (
-              <button
-                key={tab.value}
-                type="button"
-                onClick={() => {
-                  setStatus(tab.value)
-                  setPage(1)
-                }}
-                className={cn(
-                  'flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition md:flex-none',
-                  status === tab.value ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800',
-                )}
-              >
-                {tab.label}
-                {summary && <span className="ml-1.5 text-xs text-slate-400">{summary[tab.summaryKey]}</span>}
-              </button>
-            ))}
-          </div>
+          <SegmentedControl
+            aria-label="Filter status"
+            options={STATUS_TABS.map((tab) => ({ value: tab.value, label: tab.label, count: summary?.[tab.summaryKey] }))}
+            value={status}
+            onChange={(value) => {
+              setStatus(value)
+              setPage(1)
+            }}
+          />
           <div className="relative md:w-80">
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" />
             <input
@@ -165,7 +156,7 @@ export default function StaffList() {
                 setPage(1)
               }}
               placeholder="Cari nama, email, atau NIM…"
-              className="w-full rounded-xl border border-slate-300 bg-white py-2 pr-3 pl-9 text-sm outline-none transition hover:border-slate-400 focus:border-slate-600 focus:ring-4 focus:ring-slate-200/70"
+              className="h-9 w-full rounded-lg border border-slate-200 bg-white pr-3 pl-9 text-sm shadow-card outline-none transition hover:border-slate-300 focus:border-slate-400 focus:ring-[3px] focus:ring-slate-200/60"
             />
           </div>
         </div>
@@ -196,7 +187,7 @@ export default function StaffList() {
             {/* Tabel (tablet & desktop) */}
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full text-left text-sm">
-                <thead className="bg-slate-50 text-xs tracking-wide whitespace-nowrap text-slate-500 uppercase">
+                <thead className="border-y border-slate-100 bg-slate-50/70 text-xs whitespace-nowrap text-slate-500">
                   <tr>
                     <th className="px-4 py-3 font-medium">Nama</th>
                     <th className="px-4 py-3 font-medium">NIM</th>

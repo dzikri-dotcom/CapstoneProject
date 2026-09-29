@@ -180,7 +180,7 @@ export default function PayrollDetail() {
         </Card>
       ) : (
         <div className="space-y-6">
-          <div className="stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard icon={Wallet} label="Total gaji" value={formatRupiah(period.total_amount)} />
             <StatCard icon={Users} label="Staff" value={details.length} tone="blue" />
             <StatCard icon={ReceiptText} label="Shift hadir" value={totalShifts} tone="green" />

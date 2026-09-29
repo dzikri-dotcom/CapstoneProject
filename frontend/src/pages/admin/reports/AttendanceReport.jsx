@@ -74,7 +74,7 @@ export default function AttendanceReport() {
 
       {data && rows.length > 0 && (
         <div className={cn('space-y-6 transition-opacity', loading && 'opacity-60')}>
-          <div className="stagger grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
             <StatCard icon={Percent} tone="violet" label="Tingkat kehadiran" value={`${totals.attendance_rate.toLocaleString('id-ID')}%`} hint={`${totals.shifts} shift berjalan`} />
             <StatCard icon={CircleCheck} tone="blue" label="Tepat waktu" value={totals.on_time} />
             <StatCard icon={Clock} tone="amber" label="Terlambat" value={totals.late} hint={totals.missing_checkout ? `${totals.missing_checkout} belum check-out` : undefined} />

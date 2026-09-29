@@ -48,7 +48,7 @@ export default function Shifts() {
       {error && !data && <Alert variant="error">{getErrorMessage(error)}</Alert>}
 
       {data && shifts.length === 0 && (
-        <div className="rounded-2xl border border-slate-200 bg-white">
+        <div className="rounded-xl border border-slate-200/80 bg-white shadow-card">
           <EmptyState
             icon={CalendarDays}
             title="Belum ada jadwal shift"
@@ -60,11 +60,11 @@ export default function Shifts() {
       {shifts.length > 0 && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="rounded-xl border border-slate-200/80 bg-white shadow-card p-4">
               <p className="text-xs text-slate-500">Total shift</p>
               <p className="text-xl font-semibold text-slate-900">{shifts.length}</p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="rounded-xl border border-slate-200/80 bg-white shadow-card p-4">
               <p className="text-xs text-slate-500">Total jam</p>
               <p className="text-xl font-semibold text-slate-900">{formatDuration(data.meta.total_minutes)}</p>
             </div>
@@ -86,7 +86,7 @@ export default function Shifts() {
                     <li
                       key={shift.id}
                       className={cn(
-                        'flex gap-4 rounded-2xl border bg-white p-4',
+                        'flex gap-4 rounded-xl border bg-white p-4 shadow-card',
                         isToday ? 'border-brand-300 ring-2 ring-brand-100' : 'border-slate-200',
                         past && 'opacity-60',
                       )}

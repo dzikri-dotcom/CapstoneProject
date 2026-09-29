@@ -63,7 +63,7 @@ export default function FairnessReport() {
 
       {data && hasShifts && (
         <div className={cn('space-y-6 transition-opacity', loading && 'opacity-60')}>
-          <div className="stagger grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
             <StatCard icon={Clock} tone="blue" label="Rata-rata jam per staff" value={formatHours(stats.mean)} hint={`${stats.count} staff · total ${formatHours(stats.total)}`} />
             <StatCard icon={ArrowUpDown} tone="violet" label="Selisih tertinggi–terendah" value={formatHours(stats.range)} hint={`${formatHours(stats.max)} – ${formatHours(stats.min)}`} />
             <StatCard icon={Sigma} tone="amber" label="Standar deviasi" value={formatHours(stats.sd)} hint="Makin kecil makin merata" />

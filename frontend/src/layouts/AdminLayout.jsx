@@ -1,4 +1,4 @@
-import { CalendarDays, ChevronDown, ChevronRight, KeyRound, LogOut, Menu, Search, Sparkles, X } from 'lucide-react'
+import { ChevronRight, ChevronsUpDown, KeyRound, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Search, X } from 'lucide-react'
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import CommandPalette from '@/components/CommandPalette'
@@ -7,20 +7,18 @@ import Avatar from '@/components/ui/Avatar'
 import PageLoader from '@/components/ui/PageLoader'
 import useAuth from '@/hooks/useAuth'
 import cn from '@/utils/cn'
-import { formatLongDate } from '@/utils/format'
-import { adminMenu, menuTints } from './adminMenu'
-
-const crumbDot = {
-  rose: 'bg-rose-500',
-  sky: 'bg-sky-500',
-  violet: 'bg-violet-500',
-  emerald: 'bg-emerald-500',
-  amber: 'bg-amber-500',
-  pink: 'bg-pink-500',
-  slate: 'bg-slate-400',
-}
+import { adminMenu } from './adminMenu'
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
+const COLLAPSE_KEY = 'admin.sidebarCollapsed'
+
+function readCollapsed() {
+  try {
+    return localStorage.getItem(COLLAPSE_KEY) === '1'
+  } catch {
+    return false
+  }
+}
 
 /** Menu yang paling cocok dengan URL saat ini, untuk breadcrumb. */
 function currentMenu(pathname) {
@@ -34,72 +32,7 @@ function currentMenu(pathname) {
   return best
 }
 
-function Sidebar({ onNavigate, onClose }) {
-  return (
-    <div className="bg-shell flex h-full flex-col lg:bg-none lg:bg-transparent">
-      <div className="flex h-[72px] shrink-0 items-center justify-between px-5">
-        <Logo inverted />
-        {onClose && (
-          <button type="button" onClick={onClose} className="rounded-lg p-1 text-slate-400 hover:bg-white/10 lg:hidden" aria-label="Tutup menu">
-            <X className="size-5" />
-          </button>
-        )}
-      </div>
-
-      <nav className="flex-1 space-y-4 overflow-y-auto px-3 pb-3 [scrollbar-color:rgb(51_65_85)_transparent]">
-        {adminMenu.map((group) => (
-          <div key={group.label}>
-            <p className="mb-1 px-3 text-[10.5px] font-bold tracking-[0.14em] text-white/35 uppercase">{group.label}</p>
-            <ul className="space-y-0.5">
-              {group.items.map(({ to, label, icon: Icon, end }) => (
-                <li key={to}>
-                  <NavLink
-                    to={to}
-                    end={end}
-                    onClick={onNavigate}
-                    className={({ isActive }) =>
-                      cn(
-                        'group flex items-center gap-3 rounded-xl px-2 py-1.5 text-sm font-medium transition-all duration-200',
-                        isActive ? 'bg-brand-gradient text-white shadow-glow' : 'text-slate-300/80 hover:bg-white/[0.06] hover:text-white',
-                      )
-                    }
-                  >
-                    {({ isActive }) => (
-                      <>
-                        <span
-                          className={cn(
-                            'flex size-8 shrink-0 items-center justify-center rounded-lg transition duration-200',
-                            isActive ? 'bg-white/20 text-white' : cn(menuTints[group.tint], 'group-hover:scale-110'),
-                          )}
-                        >
-                          <Icon className="size-[17px]" />
-                        </span>
-                        {label}
-                      </>
-                    )}
-                  </NavLink>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </nav>
-
-      <div className="relative m-3 hidden overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600/40 to-fuchsia-600/20 p-4 ring-1 ring-white/10 [@media(min-height:880px)]:block">
-        <div className="absolute -top-6 -right-6 size-20 rounded-full bg-fuchsia-500/30 blur-2xl" aria-hidden="true" />
-        <p className="relative flex items-center gap-1.5 text-xs font-semibold text-white">
-          <Sparkles className="size-3.5 text-amber-300" /> Pencarian cepat
-        </p>
-        <p className="relative mt-1 text-xs leading-relaxed text-white/60">
-          Tekan <kbd className="rounded bg-white/15 px-1 font-sans text-white">{isMac ? '⌘' : 'Ctrl'} K</kbd> untuk membuka menu
-          atau mencari staff dari mana saja.
-        </p>
-      </div>
-    </div>
-  )
-}
-
-function UserMenu() {
+function UserMenu({ collapsed }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
@@ -108,8 +41,13 @@ function UserMenu() {
   useEffect(() => {
     if (!open) return undefined
     const close = (event) => !ref.current?.contains(event.target) && setOpen(false)
+    const onKey = (event) => event.key === 'Escape' && setOpen(false)
     document.addEventListener('mousedown', close)
-    return () => document.removeEventListener('mousedown', close)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', close)
+      document.removeEventListener('keydown', onKey)
+    }
   }, [open])
 
   async function handleLogout() {
@@ -122,28 +60,50 @@ function UserMenu() {
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="flex items-center gap-2.5 rounded-xl bg-white py-1 pr-2 pl-1 shadow-soft ring-1 ring-slate-200/80 transition hover:ring-slate-300"
+        className={cn(
+          'flex w-full items-center gap-2.5 rounded-lg p-1.5 text-left transition-colors hover:bg-slate-100',
+          open && 'bg-slate-100',
+          collapsed && 'justify-center',
+        )}
         aria-expanded={open}
         aria-haspopup="menu"
+        title={collapsed ? user.name : undefined}
       >
         <Avatar name={user.name} size="sm" />
-        <span className="hidden text-left leading-tight md:block">
-          <span className="block text-sm font-semibold text-slate-800">{user.name}</span>
-          <span className="block text-xs text-slate-500">{user.role_label}</span>
-        </span>
-        <ChevronDown className={cn('size-4 text-slate-400 transition', open && 'rotate-180')} />
+        {!collapsed && (
+          <>
+            <span className="min-w-0 flex-1 leading-tight">
+              <span className="block truncate text-[13px] font-medium text-slate-800">{user.name}</span>
+              <span className="block truncate text-xs text-slate-500">{user.role_label}</span>
+            </span>
+            <ChevronsUpDown className="size-3.5 shrink-0 text-slate-400" />
+          </>
+        )}
       </button>
       {open && (
-        <div role="menu" className="absolute right-0 mt-2 w-56 animate-scale-in overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-1.5 shadow-lift">
-          <div className="px-3 py-2">
-            <p className="truncate text-sm font-semibold text-slate-800">{user.name}</p>
+        <div
+          role="menu"
+          className="absolute bottom-full left-0 z-50 mb-1.5 w-60 animate-scale-in rounded-lg border border-slate-200 bg-white p-1 shadow-pop"
+        >
+          <div className="px-2.5 py-2">
+            <p className="truncate text-[13px] font-medium text-slate-800">{user.name}</p>
             <p className="truncate text-xs text-slate-500">{user.email}</p>
           </div>
           <div className="my-1 h-px bg-slate-100" />
-          <Link role="menuitem" to="/admin/profil" onClick={() => setOpen(false)} className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+          <Link
+            role="menuitem"
+            to="/admin/profil"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-[13px] text-slate-700 hover:bg-slate-100"
+          >
             <KeyRound className="size-4 text-slate-400" /> Akun & password
           </Link>
-          <button role="menuitem" type="button" onClick={handleLogout} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-red-600 hover:bg-red-50">
+          <button
+            role="menuitem"
+            type="button"
+            onClick={handleLogout}
+            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-[13px] text-red-600 hover:bg-red-50"
+          >
             <LogOut className="size-4" /> Keluar
           </button>
         </div>
@@ -152,19 +112,137 @@ function UserMenu() {
   )
 }
 
+function Sidebar({ collapsed, onToggleCollapse, onNavigate, onClose, onSearch }) {
+  return (
+    <div className="flex h-full flex-col">
+      <div className={cn('flex h-14 shrink-0 items-center gap-2 px-3', collapsed ? 'justify-center' : 'justify-between')}>
+        <Link to="/admin" onClick={onNavigate} className="min-w-0 rounded-md px-1">
+          <Logo compact iconOnly={collapsed} />
+        </Link>
+        {onClose ? (
+          <button type="button" onClick={onClose} className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 lg:hidden" aria-label="Tutup menu">
+            <X className="size-4" />
+          </button>
+        ) : (
+          !collapsed && (
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+              aria-label="Ciutkan sidebar"
+              title="Ciutkan sidebar"
+            >
+              <PanelLeftClose className="size-4" />
+            </button>
+          )
+        )}
+      </div>
+
+      <div className="px-3 pb-2">
+        <button
+          type="button"
+          onClick={onSearch}
+          className={cn(
+            'flex h-8 w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-[13px] text-slate-400 transition-colors hover:border-slate-300 hover:bg-white hover:text-slate-600',
+            collapsed && 'justify-center px-0',
+          )}
+          aria-label="Cari menu atau staff"
+          title={collapsed ? `Cari (${isMac ? '⌘' : 'Ctrl'} K)` : undefined}
+        >
+          <Search className="size-3.5 shrink-0" />
+          {!collapsed && (
+            <>
+              <span className="flex-1 text-left">Cari…</span>
+              <kbd className="rounded border border-slate-200 bg-white px-1 font-sans text-[10px] text-slate-400">{isMac ? '⌘' : 'Ctrl'} K</kbd>
+            </>
+          )}
+        </button>
+      </div>
+
+      <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-2">
+        {adminMenu.map((group, index) => (
+          <div key={group.label}>
+            {collapsed ? (
+              index > 0 && <div className="mx-auto mb-1.5 h-px w-5 bg-slate-200" aria-hidden="true" />
+            ) : (
+              <p className="mb-1 px-2 text-[11px] font-medium text-slate-400">{group.label}</p>
+            )}
+            <ul className="space-y-px">
+              {group.items.map(({ to, label, icon: Icon, end }) => (
+                <li key={to}>
+                  <NavLink
+                    to={to}
+                    end={end}
+                    onClick={onNavigate}
+                    title={collapsed ? label : undefined}
+                    aria-label={collapsed ? label : undefined}
+                    className={({ isActive }) =>
+                      cn(
+                        'group relative flex h-8 items-center gap-2.5 rounded-lg px-2 text-[13px] font-medium transition-colors',
+                        collapsed && 'justify-center px-0',
+                        isActive
+                          ? 'bg-brand-50 text-brand-700'
+                          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+                      )
+                    }
+                  >
+                    {({ isActive }) => (
+                      <>
+                        {isActive && !collapsed && <span className="absolute top-2 bottom-2 -left-3 w-0.5 rounded-r-full bg-brand-500" aria-hidden="true" />}
+                        <Icon className={cn('size-4 shrink-0', isActive ? 'text-brand-600' : 'text-slate-400 group-hover:text-slate-600')} />
+                        {!collapsed && <span className="truncate">{label}</span>}
+                      </>
+                    )}
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </nav>
+
+      <div className="border-t border-slate-100 p-2">
+        {collapsed && !onClose && (
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className="mb-1 flex h-8 w-full items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+            aria-label="Lebarkan sidebar"
+            title="Lebarkan sidebar"
+          >
+            <PanelLeftOpen className="size-4" />
+          </button>
+        )}
+        <UserMenu collapsed={collapsed} />
+      </div>
+    </div>
+  )
+}
+
 /**
- * Layout admin: bingkai gelap dengan sidebar berwarna; konten berada di panel terang yang menjorok
- * (desktop) / laci geser (HP). Top bar berisi breadcrumb,
- * pencarian cepat (Ctrl+K), menu pengguna, dan transisi halus antarhalaman.
+ * Layout admin: sidebar terang yang bisa diciutkan (desktop) / laci geser (HP), dan panel konten
+ * yang menempel di sebelahnya. Top bar berisi breadcrumb; pencarian cepat lewat Ctrl/⌘ + K.
  */
 export default function AdminLayout() {
   const location = useLocation()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [drawerOpen, setDrawerOpen] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
-  const closeSidebar = () => setSidebarOpen(false)
+  const [collapsed, setCollapsed] = useState(readCollapsed)
+  const panelRef = useRef(null)
   const crumb = currentMenu(location.pathname)
   const isDetail = crumb && location.pathname !== crumb.item.to
-  const panelRef = useRef(null)
+  const closeDrawer = () => setDrawerOpen(false)
+
+  function toggleCollapse() {
+    setCollapsed((value) => {
+      try {
+        localStorage.setItem(COLLAPSE_KEY, value ? '0' : '1')
+      } catch {
+        // Penyimpanan diblokir: pilihan hanya berlaku selama sesi ini.
+      }
+      return !value
+    })
+  }
 
   // Di desktop panel konten punya scroll sendiri: kembali ke atas setiap pindah halaman.
   useEffect(() => {
@@ -183,74 +261,85 @@ export default function AdminLayout() {
     return () => window.removeEventListener('keydown', handleKey)
   }, [])
 
-  return (
-    <div className="min-h-screen lg:bg-shell">
-      {sidebarOpen && <div className="fixed inset-0 z-40 animate-fade-in bg-slate-950/60 backdrop-blur-sm lg:hidden" onClick={closeSidebar} aria-hidden="true" />}
+  const openSearch = () => {
+    closeDrawer()
+    setPaletteOpen(true)
+  }
 
+  return (
+    <div className="min-h-screen bg-canvas lg:bg-white">
+      {/* Laci menu (HP) */}
+      {drawerOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="absolute inset-0 animate-fade-in bg-slate-900/40" onClick={closeDrawer} aria-hidden="true" />
+          <aside className="absolute inset-y-0 left-0 w-72 animate-drawer-in bg-white shadow-pop">
+            <Sidebar onNavigate={closeDrawer} onClose={closeDrawer} onSearch={openSearch} />
+          </aside>
+        </div>
+      )}
+
+      {/* Sidebar tetap (desktop) */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 w-72 transition-transform duration-300 ease-out lg:z-30 lg:w-[248px] lg:translate-x-0',
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full',
+          'fixed inset-y-0 left-0 z-30 hidden transition-[width] duration-200 ease-out lg:block',
+          collapsed ? 'w-[60px]' : 'w-60',
         )}
       >
-        <Sidebar onNavigate={closeSidebar} onClose={closeSidebar} />
+        <Sidebar collapsed={collapsed} onToggleCollapse={toggleCollapse} onSearch={openSearch} />
       </aside>
 
-      <div className="lg:py-2 lg:pr-2 lg:pl-[248px]">
+      <div className={cn('transition-[padding] duration-200 ease-out lg:py-2 lg:pr-2', collapsed ? 'lg:pl-[60px]' : 'lg:pl-60')}>
         <div
           ref={panelRef}
-          className="bg-mesh min-h-screen lg:h-[calc(100dvh-1rem)] lg:min-h-0 lg:overflow-y-auto lg:rounded-[26px] lg:shadow-2xl lg:shadow-black/40"
+          className="min-h-screen bg-canvas lg:h-[calc(100dvh-1rem)] lg:min-h-0 lg:overflow-y-auto lg:rounded-xl lg:border lg:border-slate-200"
         >
-          <header className="glass sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-white/80 px-4 sm:px-6">
-            <button type="button" onClick={() => setSidebarOpen(true)} className="-ml-1 rounded-xl p-2 text-slate-600 hover:bg-slate-100 lg:hidden" aria-label="Buka menu">
+          <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-slate-200/70 bg-canvas/85 px-4 backdrop-blur-md sm:px-6">
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(true)}
+              className="-ml-1.5 rounded-md p-1.5 text-slate-600 hover:bg-slate-200/60 lg:hidden"
+              aria-label="Buka menu"
+            >
               <Menu className="size-5" />
             </button>
 
-            <nav aria-label="Breadcrumb" className="hidden min-w-0 items-center gap-1.5 text-sm sm:flex">
+            <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-[13px]">
               {crumb ? (
                 <>
-                  <span className={cn('size-2 rounded-full', crumbDot[crumb.group.tint])} aria-hidden="true" />
-                  <span className="text-slate-400">{crumb.group.label}</span>
-                  <ChevronRight className="size-3.5 text-slate-300" />
+                  <span className="hidden text-slate-400 sm:inline">{crumb.group.label}</span>
+                  <ChevronRight className="hidden size-3.5 text-slate-300 sm:block" />
                   {isDetail ? (
                     <>
-                      <Link to={crumb.item.to} className="font-medium text-slate-500 hover:text-slate-900">
+                      <Link to={crumb.item.to} className="truncate text-slate-500 hover:text-slate-900">
                         {crumb.item.label}
                       </Link>
                       <ChevronRight className="size-3.5 text-slate-300" />
-                      <span className="font-semibold text-slate-900">Detail</span>
+                      <span className="font-medium text-slate-900">Detail</span>
                     </>
                   ) : (
-                    <span className="font-semibold text-slate-900">{crumb.item.label}</span>
+                    <span className="truncate font-medium text-slate-900">{crumb.item.label}</span>
                   )}
                 </>
               ) : (
-                <span className="font-semibold text-slate-900">Akun</span>
+                <span className="font-medium text-slate-900">Akun</span>
               )}
             </nav>
 
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ml-auto flex items-center gap-1">
               <button
                 type="button"
-                onClick={() => setPaletteOpen(true)}
-                className="group flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm text-slate-500 shadow-soft ring-1 ring-slate-200/80 transition hover:text-slate-700 hover:ring-violet-300 md:w-72"
+                onClick={openSearch}
+                className="rounded-md p-1.5 text-slate-500 hover:bg-slate-200/60 lg:hidden"
+                aria-label="Cari menu atau staff"
               >
-                <Search className="size-4 transition group-hover:text-violet-500" />
-                <span className="hidden md:inline">Cari menu atau staff…</span>
-                <kbd className="ml-auto hidden rounded-md bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-500 md:inline">
-                  {isMac ? '⌘' : 'Ctrl'} K
-                </kbd>
+                <Search className="size-4" />
               </button>
-              <span className="hidden items-center gap-1.5 rounded-xl bg-white px-3 py-2 text-xs font-medium text-slate-500 shadow-soft ring-1 ring-slate-200/80 xl:inline-flex">
-                <CalendarDays className="size-3.5 text-violet-500" /> {formatLongDate()}
-              </span>
-              <UserMenu />
             </div>
           </header>
 
-          <main className="px-4 py-5 sm:px-6 lg:py-6">
+          <main className="px-4 py-6 sm:px-6 lg:px-8">
             <Suspense fallback={<PageLoader />}>
-              <div key={location.pathname} className="animate-slide-up">
+              <div key={location.pathname} className="animate-rise">
                 <Outlet />
               </div>
             </Suspense>

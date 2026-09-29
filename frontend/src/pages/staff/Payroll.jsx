@@ -55,7 +55,7 @@ export default function Payroll() {
       {error && !payrolls && <Alert variant="error">{getErrorMessage(error)}</Alert>}
 
       {payrolls && payrolls.length === 0 && (
-        <div className="rounded-2xl border border-slate-200 bg-white">
+        <div className="rounded-xl border border-slate-200/80 bg-white shadow-card">
           <EmptyState
             icon={Wallet}
             title="Belum ada rekap gaji"
@@ -68,7 +68,7 @@ export default function Payroll() {
         {payrolls?.map((payroll) => {
           const expanded = open === payroll.id
           return (
-            <section key={payroll.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+            <section key={payroll.id} className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-card">
               <div className="p-4">
                 <p className="text-sm text-slate-500">{formatDateRange(payroll.period.start_date, payroll.period.end_date)}</p>
                 <p className="mt-1 text-2xl font-semibold text-slate-900 tabular-nums">{formatRupiah(payroll.total_amount)}</p>

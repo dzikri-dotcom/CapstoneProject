@@ -1,16 +1,18 @@
 import { PackageCheck } from 'lucide-react'
 import cn from '@/utils/cn'
 
-export default function Logo({ compact = false, inverted = false }) {
+export default function Logo({ compact = false, inverted = false, iconOnly = false }) {
   return (
-    <div className="flex items-center gap-2.5">
-      <div className="bg-brand-gradient flex size-9 shrink-0 items-center justify-center rounded-xl text-white shadow-glow ring-1 ring-white/20">
-        <PackageCheck className="size-5" />
+    <div className="flex min-w-0 items-center gap-2.5">
+      <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white">
+        <PackageCheck className="size-[18px]" />
       </div>
-      <div className="leading-tight">
-        <p className={cn('text-sm font-bold', inverted ? 'text-white' : 'text-slate-900')}>Presensi Logistik</p>
-        {!compact && <p className={cn('text-xs', inverted ? 'text-white/55' : 'text-slate-500')}>Telkom University Surabaya</p>}
-      </div>
+      {!iconOnly && (
+        <div className="min-w-0 leading-tight">
+          <p className={cn('truncate text-sm font-semibold', inverted ? 'text-white' : 'text-slate-900')}>Presensi Logistik</p>
+          {!compact && <p className={cn('truncate text-xs', inverted ? 'text-white/50' : 'text-slate-500')}>Telkom University Surabaya</p>}
+        </div>
+      )}
     </div>
   )
 }

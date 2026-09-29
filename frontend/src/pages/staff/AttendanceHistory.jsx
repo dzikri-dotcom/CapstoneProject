@@ -26,17 +26,20 @@ function recentMonths() {
 }
 
 const statTones = {
-  blue: 'from-sky-500 to-indigo-600 shadow-indigo-500/25',
-  amber: 'from-amber-400 to-orange-500 shadow-orange-500/25',
-  red: 'from-rose-500 to-red-600 shadow-rose-500/25',
-  violet: 'from-violet-500 to-fuchsia-600 shadow-violet-500/25',
+  blue: 'bg-sky-500',
+  amber: 'bg-amber-500',
+  red: 'bg-red-500',
+  violet: 'bg-slate-400',
 }
 
 function Stat({ label, value, tone = 'violet' }) {
   return (
-    <div className={`rounded-2xl bg-gradient-to-br p-3 text-center text-white shadow-md ${statTones[tone]}`}>
-      <p className="text-xl font-extrabold tabular-nums">{value}</p>
-      <p className="text-[11px] font-medium text-white/80">{label}</p>
+    <div className="rounded-xl border border-slate-200/80 bg-white p-3 shadow-card">
+      <p className="text-lg font-semibold text-slate-900 tabular-nums">{value}</p>
+      <p className="flex items-center gap-1.5 text-[11px] text-slate-500">
+        <span className={`size-1.5 rounded-full ${statTones[tone]}`} aria-hidden="true" />
+        {label}
+      </p>
     </div>
   )
 }
@@ -71,7 +74,7 @@ export default function AttendanceHistory() {
       {error && !data && <Alert variant="error">{getErrorMessage(error)}</Alert>}
 
       {data && items.length === 0 && (
-        <div className="rounded-2xl border border-slate-200 bg-white">
+        <div className="rounded-xl border border-slate-200/80 bg-white shadow-card">
           <EmptyState icon={History} title="Belum ada riwayat" description="Belum ada shift yang berjalan pada bulan ini." />
         </div>
       )}
@@ -79,7 +82,7 @@ export default function AttendanceHistory() {
       {items.length > 0 && (
         <ul className="space-y-2">
           {items.map((item) => (
-            <li key={item.assignment_id} className="rounded-2xl border border-slate-200 bg-white p-4">
+            <li key={item.assignment_id} className="rounded-xl border border-slate-200/80 bg-white shadow-card p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="font-medium text-slate-900">{formatShortDate(item.date)}</p>

@@ -35,38 +35,38 @@ export default function Modal({ open, onClose, title, description, children, foo
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
-      <div className="absolute inset-0 animate-fade-in bg-slate-950/40 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
+      <div className="absolute inset-0 animate-fade-in bg-slate-900/40" onClick={onClose} aria-hidden="true" />
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         className={cn(
-          'relative flex max-h-[92vh] w-full animate-sheet-up flex-col rounded-t-3xl bg-white shadow-2xl ring-1 ring-slate-900/5',
-          'sm:animate-scale-in sm:rounded-2xl',
+          'relative flex max-h-[92vh] w-full animate-sheet-up flex-col rounded-t-2xl bg-white shadow-pop ring-1 ring-slate-900/10',
+          'sm:animate-scale-in sm:rounded-xl',
           sizes[size],
         )}
       >
         {/* Pegangan geser (tampilan bottom sheet di HP) */}
-        <div className="mx-auto mt-2.5 h-1.5 w-10 rounded-full bg-slate-200 sm:hidden" aria-hidden="true" />
+        <div className="mx-auto mt-2 h-1 w-9 rounded-full bg-slate-200 sm:hidden" aria-hidden="true" />
         <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
           <div>
-            <h2 id={titleId} className="text-base font-semibold tracking-tight text-slate-900">
+            <h2 id={titleId} className="text-[15px] font-semibold tracking-tight text-slate-900">
               {title}
             </h2>
-            {description && <p className="mt-0.5 text-sm text-slate-500">{description}</p>}
+            {description && <p className="mt-0.5 text-[13px] text-slate-500">{description}</p>}
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="-mr-1 rounded-xl p-1.5 text-slate-400 transition hover:rotate-90 hover:bg-slate-100 hover:text-slate-600"
+            className="-mr-1.5 rounded-md p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
             aria-label="Tutup"
           >
-            <X className="size-5" />
+            <X className="size-4" />
           </button>
         </div>
         <div className="overflow-y-auto px-5 py-4">{children}</div>
         {footer && (
-          <div className="flex flex-col-reverse gap-2 border-t border-slate-100 px-5 py-4 sm:flex-row sm:justify-end">
+          <div className="flex flex-col-reverse gap-2 rounded-b-xl border-t border-slate-100 bg-slate-50/70 px-5 py-3 sm:flex-row sm:justify-end">
             {footer}
           </div>
         )}

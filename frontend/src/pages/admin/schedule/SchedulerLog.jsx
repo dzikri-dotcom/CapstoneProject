@@ -29,12 +29,13 @@ const ACTION_BADGE = {
 
 /** Unduh log sebagai CSV (pemisah titik koma agar langsung rapi di Excel berbahasa Indonesia). */
 function downloadCsv(logs, period) {
-  const header = ['Langkah', 'Tanggal', 'Hari', 'Jam', 'Posisi pointer', 'Staff', 'Hasil', 'Alasan', 'Keterangan']
+  const header = ['Langkah', 'Tanggal', 'Hari', 'Jam', 'Pos', 'Posisi pointer', 'Staff', 'Hasil', 'Alasan', 'Keterangan']
   const rows = logs.map((log) => [
     log.step,
     log.slot?.date ?? '',
     log.slot?.day_label ?? '',
     log.slot ? `${log.slot.start_time}-${log.slot.end_time}` : '',
+    log.slot?.post_name ?? '',
     log.pointer_position ?? '',
     log.staff?.name ?? '',
     log.action_label,
@@ -93,7 +94,7 @@ export default function SchedulerLog() {
     return true
   })
   const reasons = Object.entries(summary.skip_reasons ?? {})
-  const reasonLabels = { class_conflict: 'bentrok kuliah', max_weekly_hours: 'batas jam', already_assigned: 'sudah di slot' }
+  const reasonLabels = { class_conflict: 'bentrok kuliah', max_weekly_hours: 'batas jam', already_assigned: 'sudah di slot', shift_conflict: 'di pos lain' }
 
   return (
     <>
@@ -147,7 +148,7 @@ export default function SchedulerLog() {
           return (
             <Card
               key={slot.id}
-              title={`${formatShortDate(slot.date)} · ${slot.start_time}–${slot.end_time}`}
+              title={`${formatShortDate(slot.date)} · ${slot.start_time}–${slot.end_time}${slot.post_name ? ` · ${slot.post_name}` : ''}`}
               actions={
                 <Badge color={short ? 'red' : 'green'}>
                   {short ? 'Kurang staff' : 'Terpenuhi'} {assigned}/{slot.required_staff}

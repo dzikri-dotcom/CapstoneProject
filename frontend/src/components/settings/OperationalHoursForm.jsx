@@ -9,9 +9,9 @@ import useToast from '@/hooks/useToast'
 import { getErrorMessage, getValidationErrors } from '@/services/api'
 import { updateOperationalHours } from '@/services/settingService'
 import cn from '@/utils/cn'
-import { buildDailySlots } from '@/utils/time'
+import { shiftsWithin } from '@/utils/time'
 
-export default function OperationalHoursForm({ initialDays, shiftDuration, onSaved }) {
+export default function OperationalHoursForm({ initialDays, shifts, onSaved }) {
   const toast = useToast()
   const [days, setDays] = useState(initialDays)
   const [errors, setErrors] = useState({})
@@ -41,7 +41,7 @@ export default function OperationalHoursForm({ initialDays, shiftDuration, onSav
   }
 
   return (
-    <Card title="Jam operasional" description="Hari dan jam ruang logistik buka. Slot shift dibentuk dari jam ini.">
+    <Card title="Jam operasional" description="Hari dan jam ruang logistik buka. Shift hanya dijadwalkan pada hari aktif dan di dalam jam ini.">
       <form onSubmit={handleSubmit}>
         {errors.days && (
           <Alert variant="error" className="mb-4">
@@ -52,7 +52,7 @@ export default function OperationalHoursForm({ initialDays, shiftDuration, onSav
         <div className="divide-y divide-slate-100">
           {days.map((day, index) => {
             const valid = day.open_time && day.close_time && day.open_time < day.close_time
-            const slots = day.is_active && valid ? buildDailySlots(day.open_time, day.close_time, shiftDuration) : []
+            const dayShifts = day.is_active && valid ? shiftsWithin(day.open_time, day.close_time, shifts) : []
             const error = errors[`days.${index}.close_time`] ?? errors[`days.${index}.open_time`]
 
             return (
@@ -84,7 +84,7 @@ export default function OperationalHoursForm({ initialDays, shiftDuration, onSav
                   />
                 </div>
                 <p className={cn('text-xs sm:ml-auto sm:text-right', error ? 'text-red-600' : 'text-slate-500')}>
-                  {error ?? (day.is_active ? `${slots.length} slot shift` : 'Tidak ada shift')}
+                  {error ?? (day.is_active ? dayShifts.map((shift) => `${shift.start}–${shift.end}`).join(', ') || 'Tidak ada shift di jam ini' : 'Tidak ada shift')}
                 </p>
               </div>
             )

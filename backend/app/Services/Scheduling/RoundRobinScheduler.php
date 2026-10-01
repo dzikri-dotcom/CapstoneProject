@@ -17,10 +17,10 @@ use Illuminate\Support\Str;
  * Alur:
  *  1. Staff aktif disusun dalam ANTRIAN MELINGKAR (circular queue) berurutan ID,
  *     diputar agar dimulai dari posisi pointer terakhir periode sebelumnya.
- *  2. Untuk setiap slot (urut tanggal & jam), cek staff yang ditunjuk pointer:
+ *  2. Untuk setiap slot (urut tanggal, jam shift, lalu pos jaga), cek staff yang ditunjuk pointer:
  *       - jika kosong di seluruh rentang slot (tidak ada kuliah yang beririsan),
- *         total jam minggu itu + durasi slot tidak melebihi batas, dan belum
- *         ditugaskan di slot itu → TUGASKAN;
+ *         belum bertugas di pos lain pada jam yang sama, total jam minggu itu +
+ *         durasi slot tidak melebihi batas, dan belum ditugaskan di slot itu → TUGASKAN;
  *       - jika tidak → LEWATI dengan alasan yang dicatat.
  *     Setelah dicek (ditugaskan maupun dilewati) pointer MAJU ke staff berikutnya.
  *  3. Ulangi sampai kebutuhan slot terpenuhi atau seluruh antrian sudah dicek
@@ -35,8 +35,8 @@ final class RoundRobinScheduler
     }
 
     /**
-     * @param  list<array{key:string, date:string, day_of_week:int, start:int, end:int, required:int}>  $slots  urut waktu
-     * @param  list<array{id:int, name:string, classes:array<int, list<array{start:int, end:int, course?:?string}>>}>  $staff  staff aktif urut ID
+     * @param  list<array{key:string, date:string, day_of_week:int, start:int, end:int, required:int, post_name?:string}>  $slots  urut waktu lalu pos
+     * @param  list<array{id:int, name:string, max_minutes?:?int, classes:array<int, list<array{start:int, end:int, course?:?string}>>}>  $staff  staff aktif urut ID
      * @param  ?int  $startStaffId  staff yang ditunjuk pointer di awal (null = staff pertama)
      * @param  array<int, array<string, int>>  $initialWeeklyMinutes  menit shift yang sudah dimiliki staff dari periode lain: [staffId][minggu ISO]
      */
@@ -49,6 +49,7 @@ final class RoundRobinScheduler
 
         $weeklyMinutes = $initialWeeklyMinutes;
         $minutesByStaff = array_fill_keys(array_column($queue, 'id'), 0);
+        $busy = []; // [staffId][tanggal] => daftar rentang shift yang sudah ditugaskan
         $assignments = [];
         $understaffed = [];
         $logs = [];
@@ -74,12 +75,20 @@ final class RoundRobinScheduler
                 $candidate = $queue[$pointer];
                 $currentMinutes = $weeklyMinutes[$candidate['id']][$week] ?? 0;
 
-                [$reason, $message] = $this->evaluate($candidate, $slot, $assigned, $currentMinutes, $slotMinutes);
+                [$reason, $message] = $this->evaluate(
+                    $candidate,
+                    $slot,
+                    $assigned,
+                    $currentMinutes,
+                    $slotMinutes,
+                    $busy[$candidate['id']][$slot['date']] ?? [],
+                );
 
                 if ($reason === null) {
                     $assigned[] = $candidate['id'];
                     $weeklyMinutes[$candidate['id']][$week] = $currentMinutes + $slotMinutes;
                     $minutesByStaff[$candidate['id']] += $slotMinutes;
+                    $busy[$candidate['id']][$slot['date']][] = ['start' => $slot['start'], 'end' => $slot['end'], 'post' => $slot['post_name'] ?? null];
                 }
 
                 $logs[] = $this->log(
@@ -158,7 +167,7 @@ final class RoundRobinScheduler
      *
      * @return array{0: ?SkipReason, 1: string}
      */
-    private function evaluate(array $candidate, array $slot, array $assigned, int $currentMinutes, int $slotMinutes): array
+    private function evaluate(array $candidate, array $slot, array $assigned, int $currentMinutes, int $slotMinutes, array $busyOnDate = []): array
     {
         $name = $candidate['name'];
 
@@ -181,14 +190,29 @@ final class RoundRobinScheduler
             }
         }
 
-        // (c) Total jam minggu ini setelah ditambah slot tidak melebihi batas.
-        if ($currentMinutes + $slotMinutes > $this->maxWeeklyMinutes) {
+        // (c) Tidak sedang bertugas di pos lain pada jam yang beririsan (satu orang, satu pos).
+        foreach ($busyOnDate as $shift) {
+            if (Time::overlaps($slot['start'], $slot['end'], $shift['start'], $shift['end'])) {
+                return [SkipReason::ShiftConflict, sprintf(
+                    '%s dilewati: sudah bertugas%s %s–%s.',
+                    $name,
+                    empty($shift['post']) ? '' : " di {$shift['post']}",
+                    Time::format($shift['start']),
+                    Time::format($shift['end']),
+                )];
+            }
+        }
+
+        // (d) Total jam minggu ini setelah ditambah slot tidak melebihi batas.
+        // Batas khusus staff (jika ada) menggantikan batas umum.
+        $maxMinutes = $candidate['max_minutes'] ?? $this->maxWeeklyMinutes;
+        if ($currentMinutes + $slotMinutes > $maxMinutes) {
             return [SkipReason::MaxWeeklyHours, sprintf(
                 '%s dilewati: %s + %s melebihi batas %s per minggu.',
                 $name,
                 Time::duration($currentMinutes),
                 Time::duration($slotMinutes),
-                Time::duration($this->maxWeeklyMinutes),
+                Time::duration($maxMinutes),
             )];
         }
 

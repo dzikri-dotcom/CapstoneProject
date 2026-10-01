@@ -9,7 +9,7 @@ Aplikasi web penjadwalan shift, presensi, dan penggajian student staff Unit Logi
 | Admin (koordinator logistik) | Student staff |
 |---|---|
 | Kelola data & akun staff | Isi jadwal kuliah, lihat jam kosong |
-| Pengaturan jam operasional, durasi shift, batas jam, toleransi, pembulatan | Lihat jadwal shift yang dipublikasikan |
+| Pengaturan shift, pos jaga (maks. 2 orang per pos), jam operasional, batas jam mingguan (umum & per staff), toleransi & maksimal keterlambatan, aturan potongan gaji | Lihat jadwal shift yang dipublikasikan |
 | Tarif per slot jam dengan riwayat tanggal berlaku | Presensi dengan scan QR (check-in/check-out) |
 | **Generate jadwal otomatis (Round Robin)**, edit manual, log algoritma, publish | Riwayat presensi |
 | Layar QR dinamis & monitoring/koreksi presensi | Rekap & slip gaji PDF |
@@ -51,9 +51,9 @@ php artisan migrate --seed
 
 Isi `.env` bawaan sudah mengarah ke MySQL Laragon (`root` tanpa password, database `presensi_logistik`, zona waktu `Asia/Jakarta`, `FRONTEND_URL=http://localhost:5173`). Ubah bila berbeda.
 
-`migrate --seed` mengisi: 1 admin, 10 student staff dengan jadwal kuliah (sebagian sengaja bentrok), jam operasional Senin–Jumat 08.00–17.00, dua versi tarif per jam, dan pengaturan bawaan. Setelah itu jadwal bisa langsung di-generate.
+`migrate --seed` mengisi: 1 admin, 10 student staff dengan jadwal kuliah (sebagian sengaja bentrok), 5 shift sesuai SOP (06.30–09.30, 09.30–11.30, 11.30–14.30, 14.30–16.30, 16.30–19.30), 3 pos jaga (Pos 1 & 2 di Gedung A, Pos 3 di Gedung B; maksimal 2 orang per pos), jam operasional Senin–Jumat 06.30–19.30, dua versi tarif per jam (06.00–20.00), dan pengaturan bawaan (batas 40 jam per orang per minggu, tanpa potongan gaji). Setelah itu jadwal bisa langsung di-generate.
 
-**Opsional — data demo** (jadwal 2 minggu terakhir + presensi simulasi) agar penggajian dan laporan langsung terisi:
+**Opsional — data demo** agar semua fitur langsung terisi: 14 staff tambahan (sebagian dengan batas jam mingguan khusus), jadwal minggu lalu & minggu ini (dipublikasikan) serta minggu depan (draft), presensi simulasi termasuk staff yang sedang bertugas, dan periode gaji bulan berjalan. Aman dijalankan ulang.
 
 ```bash
 php artisan db:seed --class=DemoDataSeeder
@@ -130,7 +130,9 @@ php artisan test
 
 124 test (memakai database `presensi_logistik_test`, data utama tidak tersentuh), antara lain:
 
-- `tests/Unit/RoundRobinSchedulerTest.php` — antrian melingkar, staff bentrok kuliah dilewati, batas jam per minggu, slot kurang staff, pointer berlanjut antar periode, distribusi merata, hasil deterministik
+- `tests/Unit/RoundRobinSchedulerTest.php` — antrian melingkar, staff bentrok kuliah dilewati, batas jam per minggu, satu staff tidak di dua pos pada jam yang sama, slot kurang staff, pointer berlanjut antar periode, distribusi merata, hasil deterministik
+- `tests/Feature/Admin/PayrollNoDeductionTest.php` — tanpa potongan gaji (bawaan): hadir dibayar penuh sepanjang jam shift; potongan bisa diaktifkan kembali
+- `tests/Feature/Admin/ShiftPostTest.php` — kelola shift & pos jaga, slot per shift × pos, kapasitas pos, jadwal lama tetap terbaca setelah shift/pos dihapus
 - `tests/Unit/PayrollCalculatorTest.php` — pembulatan (per menit / 30 menit, ke bawah / terdekat), tarif berbeda per slot jam, jam hadir dibatasi jam shift, tidak hadir / belum check-out
 - `tests/Unit/AvailabilityServiceTest.php`, `SlotBuilderTest.php`, `DistributionStatsTest.php`
 - `tests/Feature/*` — autentikasi, manajemen staff, jadwal kuliah, pengaturan, tarif, generate & edit jadwal, presensi QR, penggajian, laporan
@@ -142,7 +144,7 @@ Frontend: `npm run lint` dan `npm run build`.
 | Bagian | File |
 |---|---|
 | **Algoritma Round Robin** | `backend/app/Services/Scheduling/RoundRobinScheduler.php` |
-| Pembentukan slot shift | `backend/app/Services/Scheduling/SlotBuilder.php` |
+| Pembentukan slot (hari × shift × pos jaga) | `backend/app/Services/Scheduling/SlotBuilder.php` |
 | Jam kosong (jam operasional − kuliah) | `backend/app/Services/Scheduling/AvailabilityService.php` |
 | Generate & simpan hasil + log + pointer | `backend/app/Services/Scheduling/ScheduleGenerator.php` |
 | Edit manual & peringatan | `backend/app/Services/Scheduling/ScheduleEditor.php` |

@@ -2,8 +2,11 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Models\Post;
 use App\Models\RoundRobinState;
 use App\Models\SchedulePeriod;
+use App\Models\Setting;
+use App\Models\Shift;
 use App\Models\ShiftAssignment;
 use App\Models\ShiftSlot;
 use App\Models\StaffProfile;
@@ -15,6 +18,10 @@ use Tests\TestCase;
 /**
  * Generate & edit jadwal memakai data seeder (10 staff dengan jadwal kuliah yang sebagian bentrok).
  * Periode uji: Senin 28 Sep – Minggu 4 Okt 2026.
+ *
+ * Untuk menguji giliran Round Robin secara terisolasi, shift diatur menjadi lima shift 2 jam
+ * (08–10, 10–12, 12–14, 14–16, 16–17) dengan satu pos berisi 2 orang. Jadwal dengan beberapa
+ * pos jaga diuji di ShiftPostTest.
  */
 class ScheduleGenerationTest extends TestCase
 {
@@ -26,7 +33,21 @@ class ScheduleGenerationTest extends TestCase
 
         $this->travelTo('2026-09-24 10:00:00');
         $this->seed();
+        $this->useTwoHourShiftsWithOnePost();
+        // Angka harapan di kelas ini dihitung dengan batas 12 jam per minggu.
+        Setting::query()->updateOrCreate(['key' => 'max_weekly_hours'], ['value' => '12', 'type' => 'integer']);
         Sanctum::actingAs(User::where('email', 'admin@logistik.test')->firstOrFail());
+    }
+
+    private function useTwoHourShiftsWithOnePost(): void
+    {
+        Shift::query()->delete();
+        Post::query()->delete();
+
+        foreach ([['08:00', '10:00'], ['10:00', '12:00'], ['12:00', '14:00'], ['14:00', '16:00'], ['16:00', '17:00']] as $index => [$start, $end]) {
+            Shift::create(['name' => 'Shift '.($index + 1), 'start_time' => $start, 'end_time' => $end]);
+        }
+        Post::create(['name' => 'Pos 1', 'capacity' => 2]);
     }
 
     private function createPeriod(string $start = '2026-09-28', string $end = '2026-10-04'): int

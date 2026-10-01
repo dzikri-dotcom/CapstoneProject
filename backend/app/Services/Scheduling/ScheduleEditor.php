@@ -18,7 +18,8 @@ use Illuminate\Validation\ValidationException;
 /**
  * Edit manual jadwal oleh admin (tambah / hapus / pindah / ganti / tukar staff)
  * beserta peringatan jika staff sedang kuliah atau melebihi batas jam per minggu.
- * Peringatan tidak memblokir: keputusan akhir tetap di tangan admin.
+ * Peringatan tidak memblokir: keputusan akhir tetap di tangan admin. Yang diblokir hanya
+ * satu staff di dua pos pada jam yang sama, dan pos yang diisi melebihi kapasitasnya.
  */
 class ScheduleEditor
 {
@@ -42,27 +43,37 @@ class ScheduleEditor
         $weekly = $this->weeklyMinutes(collect([$slot->date]));
         $week = $slot->date->format('o-W');
         $assignedIds = $slot->assignments()->pluck('staff_profile_id')->all();
+        // Staff yang sedang bertugas di pos lain pada jam yang beririsan → tidak bisa dipilih.
+        $busyElsewhere = $this->overlappingAssignments($slot)
+            ->where('shift_slot_id', '!=', $slot->id)
+            ->mapWithKeys(fn (ShiftAssignment $a) => [$a->staff_profile_id => $a->shiftSlot->label()])
+            ->all();
 
         return $staff
-            ->map(function (StaffProfile $member) use ($slot, $classes, $weekly, $week, $assignedIds) {
+            ->map(function (StaffProfile $member) use ($slot, $classes, $weekly, $week, $assignedIds, $busyElsewhere) {
                 $isAssigned = in_array($member->id, $assignedIds, true);
                 $weekMinutes = $weekly[$member->id][$week] ?? 0;
+                $busyIn = $busyElsewhere[$member->id] ?? null;
 
                 return [
                     'staff_profile_id' => $member->id,
                     'name' => $member->user->name,
                     'nim' => $member->nim,
                     'is_assigned' => $isAssigned,
+                    'busy_in' => $busyIn,
                     'week_minutes' => $weekMinutes,
-                    'warnings' => $isAssigned ? [] : $this->warningsFor(
+                    'max_minutes' => $this->maxMinutesFor($member),
+                    'warnings' => $isAssigned || $busyIn ? [] : $this->warningsFor(
                         $classes[$member->id] ?? [],
                         $slot,
                         $weekMinutes + $this->slotMinutes($slot),
+                        $this->maxMinutesFor($member),
                     ),
                 ];
             })
             ->sortBy([
                 fn ($a, $b) => $a['is_assigned'] <=> $b['is_assigned'],
+                fn ($a, $b) => isset($a['busy_in']) <=> isset($b['busy_in']),
                 fn ($a, $b) => count($a['warnings']) <=> count($b['warnings']),
                 fn ($a, $b) => $a['week_minutes'] <=> $b['week_minutes'],
                 fn ($a, $b) => $a['name'] <=> $b['name'],
@@ -82,6 +93,7 @@ class ScheduleEditor
         $assignments = $slots->flatMap->assignments;
         $classes = $this->classesByStaff($assignments->pluck('staff_profile_id')->unique()->all());
         $weekly = $this->weeklyMinutes($slots->pluck('date'));
+        $limits = $this->maxMinutesByStaff($assignments->pluck('staff_profile_id')->unique()->all());
 
         $warnings = [];
         foreach ($slots as $slot) {
@@ -91,6 +103,7 @@ class ScheduleEditor
                     $classes[$assignment->staff_profile_id] ?? [],
                     $slot,
                     $weekly[$assignment->staff_profile_id][$week] ?? 0,
+                    $limits[$assignment->staff_profile_id] ?? $this->defaultMaxMinutes(),
                 );
                 if ($list) {
                     $warnings[$assignment->id] = $list;
@@ -116,6 +129,7 @@ class ScheduleEditor
                 'name' => $staff->user->name,
                 'is_active' => $staff->is_active,
                 'minutes' => $minutes[$staff->id]['minutes'] ?? 0,
+                'max_weekly_minutes' => $this->maxMinutesFor($staff),
                 'shifts' => $minutes[$staff->id]['shifts'] ?? 0,
             ])
             ->sortBy('name')
@@ -129,7 +143,7 @@ class ScheduleEditor
      * @param  list<array{start:int, end:int, course:?string, day:int}>  $staffClasses
      * @return list<array{type:string, message:string}>
      */
-    private function warningsFor(array $staffClasses, ShiftSlot $slot, int $weekMinutesWithSlot): array
+    private function warningsFor(array $staffClasses, ShiftSlot $slot, int $weekMinutesWithSlot, int $maxMinutes): array
     {
         $warnings = [];
         $start = Time::toMinutes($slot->start_time);
@@ -151,7 +165,6 @@ class ScheduleEditor
             }
         }
 
-        $maxMinutes = $this->settings->get('max_weekly_hours') * 60;
         if ($weekMinutesWithSlot > $maxMinutes) {
             $warnings[] = [
                 'type' => 'max_weekly_hours',
@@ -177,7 +190,8 @@ class ScheduleEditor
         if (! $staff->is_active) {
             $this->fail('staff_profile_id', 'Staff nonaktif tidak bisa dijadwalkan.');
         }
-        $this->ensureNotInSlot($slot, $staff->id);
+        $this->ensureHasRoom($slot);
+        $this->ensureFree($slot, $staff->id);
 
         return $slot->assignments()->create([
             'staff_profile_id' => $staff->id,
@@ -200,7 +214,8 @@ class ScheduleEditor
             $this->fail('shift_slot_id', 'Slot tujuan harus berada di periode yang sama.');
         }
         if ($target->id !== $assignment->shift_slot_id) {
-            $this->ensureNotInSlot($target, $assignment->staff_profile_id);
+            $this->ensureHasRoom($target);
+            $this->ensureFree($target, $assignment->staff_profile_id, [$assignment->id]);
         }
 
         $assignment->update(['shift_slot_id' => $target->id, 'source' => AssignmentSource::Manual]);
@@ -217,7 +232,7 @@ class ScheduleEditor
             $this->fail('staff_profile_id', 'Staff nonaktif tidak bisa dijadwalkan.');
         }
         if ($staff->id !== $assignment->staff_profile_id) {
-            $this->ensureNotInSlot($assignment->shiftSlot, $staff->id);
+            $this->ensureFree($assignment->shiftSlot, $staff->id);
         }
 
         $assignment->update(['staff_profile_id' => $staff->id, 'source' => AssignmentSource::Manual]);
@@ -237,8 +252,8 @@ class ScheduleEditor
         if ($first->staff_profile_id === $second->staff_profile_id) {
             $this->fail('second_assignment_id', 'Staff yang sama tidak bisa ditukar dengan dirinya sendiri.');
         }
-        $this->ensureNotInSlot($second->shiftSlot, $first->staff_profile_id);
-        $this->ensureNotInSlot($first->shiftSlot, $second->staff_profile_id);
+        $this->ensureFree($second->shiftSlot, $first->staff_profile_id, [$first->id]);
+        $this->ensureFree($first->shiftSlot, $second->staff_profile_id, [$second->id]);
 
         DB::transaction(function () use ($first, $second) {
             $firstStaff = $first->staff_profile_id;
@@ -261,6 +276,7 @@ class ScheduleEditor
             $this->classesByStaff([$assignment->staff_profile_id])[$assignment->staff_profile_id] ?? [],
             $slot,
             $weekly[$assignment->staff_profile_id][$slot->date->format('o-W')] ?? 0,
+            $this->maxMinutesByStaff([$assignment->staff_profile_id])[$assignment->staff_profile_id] ?? $this->defaultMaxMinutes(),
         );
     }
 
@@ -270,6 +286,28 @@ class ScheduleEditor
     |--------------------------------------------------------------------------
     */
 
+    private function defaultMaxMinutes(): int
+    {
+        return $this->settings->get('max_weekly_hours') * 60;
+    }
+
+    /** Batas jam mingguan yang berlaku untuk staff: batas khususnya, atau batas umum. */
+    private function maxMinutesFor(StaffProfile $staff): int
+    {
+        return $staff->max_weekly_hours ? $staff->max_weekly_hours * 60 : $this->defaultMaxMinutes();
+    }
+
+    /**
+     * @param  list<int>  $staffIds
+     * @return array<int, int>
+     */
+    private function maxMinutesByStaff(array $staffIds): array
+    {
+        return StaffProfile::query()->whereIn('id', $staffIds)->get()
+            ->mapWithKeys(fn (StaffProfile $staff) => [$staff->id => $this->maxMinutesFor($staff)])
+            ->all();
+    }
+
     private function ensureEditable(ShiftAssignment $assignment): void
     {
         if ($assignment->attendance()->exists()) {
@@ -277,17 +315,55 @@ class ScheduleEditor
         }
     }
 
-    private function ensureNotInSlot(ShiftSlot $slot, int $staffId): void
+    /** Satu slot (pos) tidak boleh diisi melebihi kebutuhannya — maksimal 2 orang per pos. */
+    private function ensureHasRoom(ShiftSlot $slot): void
     {
-        if ($slot->assignments()->where('staff_profile_id', $staffId)->exists()) {
-            $name = StaffProfile::with('user:id,name')->find($staffId)?->user->name ?? 'Staff';
-            $this->fail('staff_profile_id', "{$name} sudah ditugaskan di slot {$this->slotLabel($slot)}.");
+        if ($slot->assignments()->count() >= $slot->required_staff) {
+            $this->fail('shift_slot_id', sprintf(
+                '%s sudah penuh (maksimal %d orang).',
+                $slot->post_name ?? 'Slot ini',
+                $slot->required_staff,
+            ));
         }
+    }
+
+    /**
+     * Staff tidak boleh sudah ada di slot ini maupun di slot lain (pos lain) yang jamnya beririsan.
+     *
+     * @param  list<int>  $ignoreAssignmentIds  penugasan yang sedang dipindah/ditukar
+     */
+    private function ensureFree(ShiftSlot $slot, int $staffId, array $ignoreAssignmentIds = []): void
+    {
+        $conflict = $this->overlappingAssignments($slot)
+            ->where('staff_profile_id', $staffId)
+            ->whereNotIn('id', $ignoreAssignmentIds)
+            ->first();
+
+        if ($conflict) {
+            $name = StaffProfile::with('user:id,name')->find($staffId)?->user->name ?? 'Staff';
+            $this->fail('staff_profile_id', "{$name} sudah ditugaskan di slot {$this->slotLabel($conflict->shiftSlot)}.");
+        }
+    }
+
+    /**
+     * Semua penugasan (periode mana pun) pada tanggal slot ini yang jamnya beririsan dengan slot.
+     *
+     * @return Collection<int, ShiftAssignment>
+     */
+    private function overlappingAssignments(ShiftSlot $slot): Collection
+    {
+        return ShiftAssignment::query()
+            ->whereHas('shiftSlot', fn ($query) => $query
+                ->whereDate('date', $slot->date->toDateString())
+                ->where('start_time', '<', $slot->end_time)
+                ->where('end_time', '>', $slot->start_time))
+            ->with('shiftSlot')
+            ->get();
     }
 
     private function slotLabel(ShiftSlot $slot): string
     {
-        return $slot->date->translatedFormat('l, j M').' '.substr($slot->start_time, 0, 5).'–'.substr($slot->end_time, 0, 5);
+        return $slot->date->translatedFormat('l, j M').' '.$slot->label();
     }
 
     private function fail(string $field, string $message): never

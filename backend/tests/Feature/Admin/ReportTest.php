@@ -134,13 +134,14 @@ class ReportTest extends TestCase
     {
         Sanctum::actingAs($this->andi->user);
 
-        // Selesai: 07:55–10:00 → 120 mnt; 10:20–12:00 → 100 → 90 mnt (per 30 mnt ke bawah); hari ini belum check-out → 0
+        // Tanpa potongan gaji (bawaan): 3 shift yang dihadiri dibayar penuh, 3 × 120 mnt × Rp11.000/jam,
+        // walaupun satu shift terlambat dan shift hari ini belum check-out.
         $this->getJson('/api/staff/dashboard')
             ->assertOk()
             ->assertJsonPath('data.current.start_time', '10:00')
             ->assertJsonPath('data.month.shifts_done', 3)
-            ->assertJsonPath('data.month.paid_minutes', 210)
-            ->assertJsonPath('data.month.estimated_amount', 38500)
+            ->assertJsonPath('data.month.paid_minutes', 360)
+            ->assertJsonPath('data.month.estimated_amount', 66000)
             ->assertJsonPath('data.month.late', 1);
     }
 }

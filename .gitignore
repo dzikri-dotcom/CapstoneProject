@@ -8,6 +8,7 @@
 node_modules/
 vendor/
 dist/
+deployment-rumahweb/
 
 # Log & cache
 *.log

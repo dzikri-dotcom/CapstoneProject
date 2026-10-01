@@ -19,6 +19,8 @@ class ShiftSlotResource extends JsonResource
             'date' => $this->date->toDateString(),
             'day_of_week' => $this->date->dayOfWeekIso,
             'day_label' => DayOfWeek::from($this->date->dayOfWeekIso)->label(),
+            'shift' => ['id' => $this->shift_id, 'name' => $this->shift_name],
+            'post' => ['id' => $this->post_id, 'name' => $this->post_name, 'location' => $this->post_location],
             'start_time' => substr($this->start_time, 0, 5),
             'end_time' => substr($this->end_time, 0, 5),
             'duration_minutes' => $this->durationMinutes(),

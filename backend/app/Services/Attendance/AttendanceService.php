@@ -21,8 +21,10 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * Aturan presensi:
- *  - check-in dibuka `checkin_early_minutes` sebelum shift s.d. shift berakhir;
+ *  - check-in dibuka `checkin_early_minutes` sebelum shift;
  *  - terlambat jika check-in lewat dari jam mulai + `late_tolerance_minutes`;
+ *  - check-in ditutup pada jam mulai + `max_late_minutes` (maksimal keterlambatan):
+ *    lewat dari itu staff tidak bisa check-in dan dianggap tidak hadir;
  *  - check-out paling lambat `checkout_grace_minutes` setelah shift berakhir;
  *  - shift yang berakhir tanpa check-in otomatis ditandai tidak hadir.
  * Hanya shift dari periode yang sudah dipublikasikan yang bisa dipresensi.
@@ -52,7 +54,7 @@ class AttendanceService
     */
 
     /**
-     * @return array{start: Carbon, end: Carbon, check_in_opens: Carbon, late_after: Carbon, check_out_closes: Carbon}
+     * @return array{start: Carbon, end: Carbon, check_in_opens: Carbon, late_after: Carbon, check_in_closes: Carbon, check_out_closes: Carbon}
      */
     public function window(ShiftAssignment $assignment): array
     {
@@ -66,6 +68,8 @@ class AttendanceService
             'end' => $end,
             'check_in_opens' => $start->copy()->subMinutes($this->settings->get('checkin_early_minutes')),
             'late_after' => $start->copy()->addMinutes($this->settings->get('late_tolerance_minutes')),
+            // Batas maksimal keterlambatan, tidak pernah melewati jam selesai shift.
+            'check_in_closes' => $start->copy()->addMinutes($this->settings->get('max_late_minutes'))->min($end),
             'check_out_closes' => $end->copy()->addMinutes($this->settings->get('checkout_grace_minutes')),
         ];
     }
@@ -85,7 +89,7 @@ class AttendanceService
             $attendance?->check_in_at && $now->lte($window['check_out_closes']) => 'in_progress',
             (bool) $attendance?->check_in_at => 'missing_checkout',
             $now->lt($window['check_in_opens']) => 'upcoming',
-            $now->lt($window['end']) => 'open',
+            $now->lt($window['check_in_closes']) => 'open',
             default => 'missed',
         };
     }
@@ -105,6 +109,10 @@ class AttendanceService
             'end_time' => $window['end']->format('H:i'),
             'check_in_opens' => $window['check_in_opens']->format('H:i'),
             'late_after' => $window['late_after']->format('H:i'),
+            'check_in_closes' => $window['check_in_closes']->format('H:i'),
+            'shift_name' => $slot->shift_name,
+            'post_name' => $slot->post_name,
+            'post_location' => $slot->post_location,
             'check_out_closes' => $window['check_out_closes']->format('H:i'),
             'state' => $state,
             'state_label' => self::STATE_LABELS[$state],
@@ -216,7 +224,7 @@ class AttendanceService
     {
         $window = $this->window($assignment);
 
-        return ! $assignment->attendance && $now->gte($window['check_in_opens']) && $now->lt($window['end']);
+        return ! $assignment->attendance && $now->gte($window['check_in_opens']) && $now->lt($window['check_in_closes']);
     }
 
     private function canCheckOut(ShiftAssignment $assignment, Carbon $now): bool
@@ -241,6 +249,17 @@ class AttendanceService
                 'Check-in untuk shift %s baru dibuka pukul %s.',
                 $this->timeRange($upcoming),
                 $this->window($upcoming)['check_in_opens']->format('H:i'),
+            );
+        }
+
+        $tooLate = $today->first(fn (ShiftAssignment $a) => ! $a->attendance
+            && $now->gte($this->window($a)['check_in_closes'])
+            && $now->lt($this->window($a)['end']));
+        if ($tooLate) {
+            return sprintf(
+                'Batas maksimal keterlambatan untuk shift %s sudah lewat (check-in ditutup pukul %s). Hubungi koordinator jika perlu koreksi.',
+                $this->timeRange($tooLate),
+                $this->window($tooLate)['check_in_closes']->format('H:i'),
             );
         }
 

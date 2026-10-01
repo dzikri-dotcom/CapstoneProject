@@ -21,6 +21,7 @@ use Illuminate\Validation\ValidationException;
  * Memproses penggajian satu periode: mengambil presensi dari jadwal yang dipublikasikan,
  * menghitung setiap shift dengan PayrollCalculator memakai tarif yang berlaku pada
  * tanggal shift tersebut, lalu menyimpan rekap per staff dan rincian per tanggal.
+ * Pengaturan `salary_deduction_enabled` menentukan apakah terlambat / pulang cepat mengurangi gaji.
  */
 class PayrollService
 {
@@ -71,13 +72,7 @@ class PayrollService
                     $date = $slot->date->toDateString();
                     $ratesByDate[$date] ??= $this->ratesOn($date);
 
-                    $line = $calculator->calculate(
-                        Time::toMinutes($slot->start_time),
-                        Time::toMinutes($slot->end_time),
-                        $this->minutesOnDate($record->check_in_at, $slot->date),
-                        $this->minutesOnDate($record->check_out_at, $slot->date),
-                        $ratesByDate[$date],
-                    );
+                    $line = $this->line($calculator, $assignment, $ratesByDate[$date], $settings['salary_deduction_enabled']);
 
                     $items[] = [
                         'payroll_detail_id' => $detail->id,
@@ -113,6 +108,7 @@ class PayrollService
                 'total_amount' => round($periodTotal, 2),
                 'calculated_at' => $now,
                 'settings_snapshot' => [
+                    'salary_deduction_enabled' => $settings['salary_deduction_enabled'],
                     'rounding_unit_minutes' => $settings['rounding_unit_minutes'],
                     'rounding_mode' => $settings['rounding_mode'],
                 ],
@@ -163,13 +159,7 @@ class PayrollService
             $slot = $assignment->shiftSlot;
             $date = $slot->date->toDateString();
             $ratesByDate[$date] ??= $this->ratesOn($date);
-            $line = $calculator->calculate(
-                Time::toMinutes($slot->start_time),
-                Time::toMinutes($slot->end_time),
-                $this->minutesOnDate($assignment->attendance->check_in_at, $slot->date),
-                $this->minutesOnDate($assignment->attendance->check_out_at, $slot->date),
-                $ratesByDate[$date],
-            );
+            $line = $this->line($calculator, $assignment, $ratesByDate[$date], $settings['salary_deduction_enabled']);
             $result['shifts']++;
             $result['paid_minutes'] += $line['paid_minutes'];
             $result['amount'] += $line['amount'];
@@ -184,6 +174,25 @@ class PayrollService
     {
         $this->ensureDraft($period);
         $period->delete();
+    }
+
+    /**
+     * Hitung satu shift: dengan potongan → sesuai menit hadir; tanpa potongan → jam shift penuh bila hadir.
+     *
+     * @param  list<array{start:int, end:int, rate:int}>  $rates
+     */
+    private function line(PayrollCalculator $calculator, ShiftAssignment $assignment, array $rates, bool $deduct): array
+    {
+        $slot = $assignment->shiftSlot;
+        $arguments = [
+            Time::toMinutes($slot->start_time),
+            Time::toMinutes($slot->end_time),
+            $this->minutesOnDate($assignment->attendance->check_in_at, $slot->date),
+            $this->minutesOnDate($assignment->attendance->check_out_at, $slot->date),
+            $rates,
+        ];
+
+        return $deduct ? $calculator->calculate(...$arguments) : $calculator->fullShift(...$arguments);
     }
 
     /**

@@ -30,6 +30,7 @@ class StaffService
                 'nim' => $data['nim'],
                 'phone' => $data['phone'] ?? null,
                 'study_program' => $data['study_program'],
+                'max_weekly_hours' => $data['max_weekly_hours'] ?? null,
                 'is_active' => $data['is_active'] ?? true,
             ])->setRelation('user', $user);
         });
@@ -39,7 +40,7 @@ class StaffService
     {
         DB::transaction(function () use ($staff, $data) {
             $staff->user->update(Arr::only($data, ['name', 'email']));
-            $staff->update(Arr::only($data, ['nim', 'phone', 'study_program', 'is_active']));
+            $staff->update(Arr::only($data, ['nim', 'phone', 'study_program', 'max_weekly_hours', 'is_active']));
 
             // Staff yang dinonaktifkan langsung keluar dari semua perangkat.
             if ($staff->wasChanged('is_active') && ! $staff->is_active) {

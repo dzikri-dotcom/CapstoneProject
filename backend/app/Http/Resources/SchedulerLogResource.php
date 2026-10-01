@@ -36,6 +36,8 @@ class SchedulerLogResource extends JsonResource
                 'id' => $slot->id,
                 'date' => $slot->date->toDateString(),
                 'day_label' => DayOfWeek::from($slot->date->dayOfWeekIso)->label(),
+                'shift_name' => $slot->shift_name,
+                'post_name' => $slot->post_name,
                 'start_time' => substr($slot->start_time, 0, 5),
                 'end_time' => substr($slot->end_time, 0, 5),
                 'required_staff' => $slot->required_staff,

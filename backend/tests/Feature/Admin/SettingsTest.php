@@ -33,8 +33,9 @@ class SettingsTest extends TestCase
     {
         $this->getJson('/api/admin/settings')
             ->assertOk()
-            ->assertJsonPath('data.shift_duration_minutes', 120)
-            ->assertJsonPath('data.staff_per_shift', 2)
+            ->assertJsonPath('data.late_tolerance_minutes', 10)
+            ->assertJsonPath('data.max_late_minutes', 30)
+            ->assertJsonMissingPath('data.shift_duration_minutes')
             ->assertJsonPath('data.rounding_mode', 'down');
     }
 
@@ -51,12 +52,13 @@ class SettingsTest extends TestCase
     public function test_validasi_pengaturan(): void
     {
         $this->putJson('/api/admin/settings', $this->validSettings([
-            'shift_duration_minutes' => 100,
+            'late_tolerance_minutes' => 20,
+            'max_late_minutes' => 15,
             'rounding_mode' => 'up',
             'qr_refresh_seconds' => 10,
         ]))
             ->assertStatus(422)
-            ->assertJsonPath('errors.shift_duration_minutes.0', 'Durasi shift harus kelipatan 30.')
+            ->assertJsonPath('errors.max_late_minutes.0', 'Maksimal keterlambatan tidak boleh lebih kecil dari toleransi keterlambatan.')
             ->assertJsonPath('errors.rounding_mode.0', 'Cara pembulatan yang dipilih tidak valid.')
             ->assertJsonPath('errors.qr_refresh_seconds.0', 'Interval pergantian QR harus bernilai antara 30 sampai 60.');
     }

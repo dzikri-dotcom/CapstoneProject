@@ -49,7 +49,7 @@ class SettingService
 
             Setting::query()->updateOrCreate(
                 ['key' => $key],
-                ['value' => (string) $value, 'type' => Setting::DEFAULTS[$key]['type']],
+                ['value' => is_bool($value) ? ($value ? '1' : '0') : (string) $value, 'type' => Setting::DEFAULTS[$key]['type']],
             );
         }
 

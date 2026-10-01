@@ -11,17 +11,20 @@ export function fromMinutes(minutes) {
 }
 
 /**
- * Pecah jam operasional satu hari menjadi slot shift, sama seperti backend:
- * mulai dari jam buka, tiap `duration` menit; slot terakhir dipendekkan sampai jam tutup.
- * buildDailySlots('08:00', '17:00', 120) → 08–10, 10–12, 12–14, 14–16, 16–17
+ * Shift aktif yang berjalan pada satu hari operasional, sama seperti backend:
+ * shift dipotong ke jam buka–tutup; yang seluruhnya di luar jam operasional dilewati.
+ * shiftsWithin('08:00', '15:00', [08–12, 13–17, 17–20]) → 08–12, 13–15
  */
-export function buildDailySlots(open, close, duration) {
-  const slots = []
-  const end = toMinutes(close)
-  for (let start = toMinutes(open); start < end; start += duration) {
-    slots.push({ start: fromMinutes(start), end: fromMinutes(Math.min(start + duration, end)) })
-  }
-  return slots
+export function shiftsWithin(open, close, shifts) {
+  return shifts
+    .filter((shift) => shift.is_active)
+    .map((shift) => ({
+      ...shift,
+      start: fromMinutes(Math.max(toMinutes(shift.start_time), toMinutes(open))),
+      end: fromMinutes(Math.min(toMinutes(shift.end_time), toMinutes(close))),
+    }))
+    .filter((shift) => shift.start < shift.end)
+    .sort((a, b) => a.start.localeCompare(b.start))
 }
 
 /**

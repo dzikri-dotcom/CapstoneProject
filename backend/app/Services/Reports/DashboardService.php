@@ -33,12 +33,15 @@ class DashboardService
             ->whereHas('shiftSlot', fn (Builder $slot) => $slot->where('date', $today))
             ->with(['shiftSlot', 'attendance', 'staffProfile.user:id,name'])
             ->get()
-            ->sortBy(fn (ShiftAssignment $a) => $a->shiftSlot->start_time.' '.$a->staffProfile->user->name);
+            ->sortBy(fn (ShiftAssignment $a) => sprintf('%s %010d %s', $a->shiftSlot->start_time, $a->shiftSlot->post_id ?? 0, $a->staffProfile->user->name));
 
         $todaySlots = $todayAssignments->groupBy('shift_slot_id')->map(function ($items) use ($now) {
             $slot = $items->first()->shiftSlot;
 
             return [
+                'id' => $slot->id,
+                'shift_name' => $slot->shift_name,
+                'post_name' => $slot->post_name,
                 'start_time' => substr($slot->start_time, 0, 5),
                 'end_time' => substr($slot->end_time, 0, 5),
                 'required_staff' => $slot->required_staff,
@@ -50,7 +53,7 @@ class DashboardService
             ->filter(fn (ShiftAssignment $a) => $this->attendance->state($a, $now) === 'in_progress')
             ->map(fn (ShiftAssignment $a) => [
                 'name' => $a->staffProfile->user->name,
-                'shift' => substr($a->shiftSlot->start_time, 0, 5).'–'.substr($a->shiftSlot->end_time, 0, 5),
+                'shift' => $a->shiftSlot->label(),
                 'check_in_time' => $a->attendance->check_in_at->format('H:i'),
             ])->values();
 
@@ -59,7 +62,7 @@ class DashboardService
             ->whereBetween('date', [$today, $now->copy()->addDays(14)->toDateString()])
             ->withCount('assignments')
             ->with('schedulePeriod:id,status')
-            ->orderBy('date')->orderBy('start_time')
+            ->orderBy('date')->orderBy('start_time')->orderBy('post_id')
             ->get()
             ->filter(fn (ShiftSlot $slot) => $slot->assignments_count < $slot->required_staff)
             ->map(fn (ShiftSlot $slot) => [
@@ -70,6 +73,7 @@ class DashboardService
                 'day_label' => DayOfWeek::from($slot->date->dayOfWeekIso)->label(),
                 'start_time' => substr($slot->start_time, 0, 5),
                 'end_time' => substr($slot->end_time, 0, 5),
+                'post_name' => $slot->post_name,
                 'missing' => $slot->required_staff - $slot->assignments_count,
             ])->values();
 
@@ -89,7 +93,7 @@ class DashboardService
         return [
             'date' => $today,
             'active_staff' => StaffProfile::active()->count(),
-            'today_shift_count' => $todaySlots->count(),
+            'today_shift_count' => $todayAssignments->unique(fn (ShiftAssignment $a) => $a->shiftSlot->start_time.'-'.$a->shiftSlot->end_time)->count(),
             'today_slots' => $todaySlots->all(),
             'on_duty' => $onDuty->all(),
             'understaffed' => $understaffed->all(),

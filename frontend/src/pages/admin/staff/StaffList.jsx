@@ -194,6 +194,7 @@ export default function StaffList() {
                     <th className="px-4 py-3 font-medium">Program studi</th>
                     <th className="px-4 py-3 font-medium">No. HP</th>
                     <th className="px-4 py-3 font-medium">Jadwal kuliah</th>
+                    <th className="px-4 py-3 font-medium">Batas / minggu</th>
                     <th className="px-4 py-3 font-medium">Status</th>
                     <th className="px-4 py-3 text-right font-medium">Aksi</th>
                   </tr>
@@ -217,6 +218,10 @@ export default function StaffList() {
                       <td className="px-4 py-3 text-slate-600">{staff.phone ?? '-'}</td>
                       <td className="px-4 py-3 text-slate-600">
                         {staff.class_schedules_count ? `${staff.class_schedules_count} kelas` : <span className="text-slate-400">Belum diisi</span>}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-slate-600 tabular-nums">
+                        {staff.effective_max_weekly_hours} jam
+                        {staff.max_weekly_hours && <span className="ml-1 text-xs text-brand-700">khusus</span>}
                       </td>
                       <td className="px-4 py-3">
                         <StatusBadge active={staff.is_active} />

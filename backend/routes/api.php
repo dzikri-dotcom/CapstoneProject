@@ -6,11 +6,13 @@ use App\Http\Controllers\Api\Admin\HourlyRateController;
 use App\Http\Controllers\Api\Admin\OperationalHourController;
 use App\Http\Controllers\Api\Admin\PayrollDetailController;
 use App\Http\Controllers\Api\Admin\PayrollPeriodController;
+use App\Http\Controllers\Api\Admin\PostController;
 use App\Http\Controllers\Api\Admin\QrTokenController;
 use App\Http\Controllers\Api\Admin\ReportController;
 use App\Http\Controllers\Api\Admin\SchedulePeriodController;
 use App\Http\Controllers\Api\Admin\SettingController;
 use App\Http\Controllers\Api\Admin\ShiftAssignmentController;
+use App\Http\Controllers\Api\Admin\ShiftController;
 use App\Http\Controllers\Api\Admin\StaffController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\Staff\AttendanceController as StaffAttendanceController;
@@ -62,6 +64,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('settings', [SettingController::class, 'update']);
         Route::get('operational-hours', [OperationalHourController::class, 'index']);
         Route::put('operational-hours', [OperationalHourController::class, 'update']);
+
+        // Shift (jam presensi) & pos jaga
+        Route::apiResource('shifts', ShiftController::class)->except('show');
+        Route::apiResource('posts', PostController::class)->except('show');
 
         // Tarif per jam
         Route::get('hourly-rates', [HourlyRateController::class, 'index']);

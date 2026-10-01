@@ -4,6 +4,7 @@ namespace Tests\Feature\Admin;
 
 use App\Enums\PayrollStatus;
 use App\Models\HourlyRate;
+use App\Models\OperationalHour;
 use App\Models\PayrollPeriod;
 use App\Models\User;
 use Database\Seeders\HourlyRateSeeder;
@@ -21,8 +22,11 @@ class HourlyRateTest extends TestCase
         parent::setUp();
 
         $this->travelTo('2026-09-24 10:00:00');
-        // Versi 1 Jan 2026 (semua Rp10.000) & 1 Agu 2026 (Rp11.000, jam 16–17 Rp13.500)
+        // Versi 1 Jan 2026 (semua Rp10.000) & 1 Agu 2026 (Rp11.000, mulai jam 16 Rp13.500)
         $this->seed([OperationalHourSeeder::class, HourlyRateSeeder::class]);
+        // Kelas ini menguji pengelolaan tarif dengan 9 slot jam (08–17), jadi rentangnya dipasang eksplisit.
+        OperationalHour::query()->update(['open_time' => '08:00', 'close_time' => '17:00']);
+        HourlyRate::query()->where('start_time', '<', '08:00')->orWhere('start_time', '>=', '17:00')->delete();
         Sanctum::actingAs(User::factory()->admin()->create());
     }
 

@@ -16,7 +16,7 @@ class SettingSeeder extends Seeder
         foreach (Setting::DEFAULTS as $key => $default) {
             Setting::query()->firstOrCreate(
                 ['key' => $key],
-                ['value' => (string) $default['value'], 'type' => $default['type']],
+                ['value' => is_bool($default['value']) ? ($default['value'] ? '1' : '0') : (string) $default['value'], 'type' => $default['type']],
             );
         }
     }

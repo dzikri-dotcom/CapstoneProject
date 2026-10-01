@@ -5,9 +5,11 @@ namespace App\Services\Scheduling;
 use App\Enums\AssignmentSource;
 use App\Models\ClassSchedule;
 use App\Models\OperationalHour;
+use App\Models\Post;
 use App\Models\RoundRobinState;
 use App\Models\SchedulePeriod;
 use App\Models\SchedulerLog;
+use App\Models\Shift;
 use App\Models\ShiftAssignment;
 use App\Models\ShiftSlot;
 use App\Models\StaffProfile;
@@ -37,18 +39,20 @@ class ScheduleGenerator
 
         $settings = $this->settings->all();
 
-        // Langkah 2: bentuk slot shift dari jam operasional & durasi shift.
-        $slots = SlotBuilder::build(
-            $period->start_date,
-            $period->end_date,
-            $this->operationalHours(),
-            $settings['shift_duration_minutes'],
-            $settings['staff_per_shift'],
-        );
+        $shifts = $this->activeShifts();
+        $posts = $this->activePosts();
+        if ($shifts === [] || $posts === []) {
+            throw ValidationException::withMessages([
+                'period' => 'Belum ada shift atau pos jaga yang aktif. Atur terlebih dahulu di halaman Pengaturan.',
+            ]);
+        }
+
+        // Langkah 2: bentuk slot dari hari operasional × shift × pos jaga.
+        $slots = SlotBuilder::build($period->start_date, $period->end_date, $this->operationalHours(), $shifts, $posts);
 
         if ($slots === []) {
             throw ValidationException::withMessages([
-                'period' => 'Tidak ada hari operasional aktif dalam rentang tanggal periode ini.',
+                'period' => 'Tidak ada shift yang jatuh pada hari & jam operasional aktif dalam rentang tanggal periode ini.',
             ]);
         }
 
@@ -104,6 +108,30 @@ class ScheduleGenerator
     }
 
     /**
+     * @return list<array{id:int, name:string, start:int, end:int}>
+     */
+    private function activeShifts(): array
+    {
+        return Shift::active()->orderBy('start_time')->orderBy('id')->get()
+            ->map(fn (Shift $shift) => [
+                'id' => $shift->id,
+                'name' => $shift->name,
+                'start' => Time::toMinutes($shift->start_time),
+                'end' => Time::toMinutes($shift->end_time),
+            ])->all();
+    }
+
+    /**
+     * @return list<array{id:int, name:string, capacity:int}>
+     */
+    private function activePosts(): array
+    {
+        return Post::active()->orderBy('id')->get()
+            ->map(fn (Post $post) => ['id' => $post->id, 'name' => $post->name, 'location' => $post->location, 'capacity' => $post->capacity])
+            ->all();
+    }
+
+    /**
      * Staff aktif urut ID beserta jadwal kuliahnya per hari (dalam menit).
      */
     private function activeStaff(): array
@@ -115,6 +143,8 @@ class ScheduleGenerator
             ->map(fn (StaffProfile $staff) => [
                 'id' => $staff->id,
                 'name' => $staff->user->name,
+                // Batas jam mingguan khusus staff (jika diisi), dalam menit.
+                'max_minutes' => $staff->max_weekly_hours ? $staff->max_weekly_hours * 60 : null,
                 'classes' => $staff->classSchedules
                     ->groupBy('day_of_week')
                     ->map(fn ($classes) => $classes->map(fn (ClassSchedule $class) => [
@@ -186,6 +216,11 @@ class ScheduleGenerator
         foreach ($slots as $slot) {
             $slotIds[$slot['key']] = ShiftSlot::query()->create([
                 'schedule_period_id' => $period->id,
+                'shift_id' => $slot['shift_id'],
+                'post_id' => $slot['post_id'],
+                'shift_name' => $slot['shift_name'],
+                'post_name' => $slot['post_name'],
+                'post_location' => $slot['post_location'],
                 'date' => $slot['date'],
                 'start_time' => Time::format($slot['start']),
                 'end_time' => Time::format($slot['end']),

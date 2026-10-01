@@ -24,7 +24,7 @@ export default function StaffHoursPanel({ staffHours }) {
   return (
     <Card
       title="Beban kerja per staff"
-      description="Total jam shift setiap staff pada periode ini. Semakin kecil standar deviasi, semakin merata."
+      description="Total jam shift setiap staff pada periode ini dibanding batas jam mingguannya. Semakin kecil standar deviasi, semakin merata."
     >
       <div className="mb-5 grid grid-cols-3 gap-3">
         <Stat label="Rata-rata" value={formatHours(mean)} />
@@ -46,8 +46,10 @@ export default function StaffHoursPanel({ staffHours }) {
             <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
               <div className="h-full rounded-full bg-brand-500" style={{ width: `${(staff.minutes / max) * 100}%` }} />
             </div>
-            <span className="w-28 shrink-0 text-right text-xs text-slate-500 tabular-nums">
-              {formatHours(staff.minutes)} · {staff.shifts} shift
+            <span className="w-36 shrink-0 text-right text-xs text-slate-500 tabular-nums">
+              {formatHours(staff.minutes)}
+              {staff.max_weekly_minutes ? <span className="text-slate-400"> / {formatHours(staff.max_weekly_minutes)}</span> : null} ·{' '}
+              {staff.shifts} shift
             </span>
           </li>
         ))}

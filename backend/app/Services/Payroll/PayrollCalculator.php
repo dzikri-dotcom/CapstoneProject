@@ -19,6 +19,9 @@ use App\Support\Time;
  *  4. Rentang tersebut dipecah per slot jam tarif (08–09, 09–10, …) lalu
  *     setiap potongan dikalikan tarif slot jamnya: menit × tarif ÷ 60.
  * Tidak hadir atau belum check-out → tidak dibayar (0) sampai dikoreksi admin.
+ *
+ * Tanpa potongan gaji (pengaturan bawaan): staff yang hadir dibayar penuh sepanjang jam shift,
+ * lihat fullShift(). Terlambat / pulang lebih cepat tidak mengurangi gaji.
  */
 final class PayrollCalculator
 {
@@ -41,6 +44,25 @@ final class PayrollCalculator
         return $mode === 'nearest'
             ? (int) round($minutes / $unit) * $unit
             : intdiv($minutes, $unit) * $unit;
+    }
+
+    /**
+     * Tanpa potongan: seluruh jam shift dibayar asalkan staff check-in.
+     * `actual_minutes` tetap mencatat menit hadir sebenarnya sebagai informasi.
+     *
+     * @param  list<array{start:int, end:int, rate:int}>  $rates
+     * @return array{actual_minutes:int, paid_minutes:int, amount:float, breakdown:list<array<string, mixed>>, unpaid_minutes:int}
+     */
+    public function fullShift(int $shiftStart, int $shiftEnd, ?int $checkIn, ?int $checkOut, array $rates): array
+    {
+        if ($checkIn === null) {
+            return $this->calculate($shiftStart, $shiftEnd, null, null, $rates);
+        }
+
+        $actual = $checkOut === null ? 0 : max(0, min($checkOut, $shiftEnd) - max($checkIn, $shiftStart));
+        $full = (new self(1, 'down'))->calculate($shiftStart, $shiftEnd, $shiftStart, $shiftEnd, $rates);
+
+        return ['actual_minutes' => $actual] + $full;
     }
 
     /**

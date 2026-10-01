@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             SettingSeeder::class,
             OperationalHourSeeder::class,
+            ShiftPostSeeder::class,
             HourlyRateSeeder::class,
             AdminSeeder::class,
             StaffSeeder::class,

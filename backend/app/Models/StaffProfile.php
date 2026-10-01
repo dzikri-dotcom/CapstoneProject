@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['user_id', 'nim', 'phone', 'study_program', 'is_active'])]
+#[Fillable(['user_id', 'nim', 'phone', 'study_program', 'max_weekly_hours', 'is_active'])]
 class StaffProfile extends Model
 {
     /** @use HasFactory<StaffProfileFactory> */
@@ -21,6 +21,7 @@ class StaffProfile extends Model
     {
         return [
             'is_active' => 'boolean',
+            'max_weekly_hours' => 'integer', // null = mengikuti batas umum di Pengaturan
         ];
     }
 

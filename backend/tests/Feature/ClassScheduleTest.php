@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\ClassSchedule;
+use App\Models\OperationalHour;
 use App\Models\StaffProfile;
 use App\Models\User;
 use Database\Seeders\OperationalHourSeeder;
@@ -20,7 +21,9 @@ class ClassScheduleTest extends TestCase
     {
         parent::setUp();
 
-        $this->seed(OperationalHourSeeder::class); // Senin–Jumat 08:00–17:00
+        $this->seed(OperationalHourSeeder::class);
+        // Angka jam kosong di kelas ini dihitung dengan jam operasional Senin–Jumat 08:00–17:00.
+        OperationalHour::query()->update(['open_time' => '08:00', 'close_time' => '17:00']);
         $this->staff = StaffProfile::factory()->create();
     }
 

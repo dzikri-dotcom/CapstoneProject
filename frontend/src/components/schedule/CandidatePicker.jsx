@@ -12,6 +12,7 @@ import { formatDuration } from '@/utils/format'
 
 function StatusBadge({ candidate }) {
   if (candidate.is_assigned) return <Badge color="gray">Sudah di slot ini</Badge>
+  if (candidate.busy_in) return <Badge color="gray">Bertugas di pos lain</Badge>
   if (candidate.warnings.length) return <Badge color="amber">Ada peringatan</Badge>
   return <Badge color="green">Tersedia</Badge>
 }
@@ -72,7 +73,7 @@ export default function CandidatePicker({ slot, title, description, onClose, onP
             <li key={candidate.staff_profile_id}>
               <button
                 type="button"
-                disabled={candidate.is_assigned || saving}
+                disabled={candidate.is_assigned || Boolean(candidate.busy_in) || saving}
                 onClick={() => choose(candidate)}
                 className="flex w-full items-start gap-3 rounded-lg px-2 py-2.5 text-left transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-55"
               >
@@ -83,7 +84,9 @@ export default function CandidatePicker({ slot, title, description, onClose, onP
                     <StatusBadge candidate={candidate} />
                   </span>
                   <span className="block text-xs text-slate-500">
-                    Jam shift minggu ini: {formatDuration(candidate.week_minutes)}
+                    Jam shift minggu ini: {formatDuration(candidate.week_minutes) || '0 jam'}
+                    {candidate.max_minutes ? ` dari batas ${formatDuration(candidate.max_minutes)}` : ''}
+                    {candidate.busy_in && ` · sedang di ${candidate.busy_in}`}
                   </span>
                   {candidate.warnings.map((warning) => (
                     <span key={warning.type} className="block text-xs text-amber-700">

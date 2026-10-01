@@ -4,13 +4,12 @@ import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
 import Input from '@/components/ui/Input'
 import Select from '@/components/ui/Select'
+import Toggle from '@/components/ui/Toggle'
 import useToast from '@/hooks/useToast'
 import { getErrorMessage, getValidationErrors } from '@/services/api'
 import { updateSettings } from '@/services/settingService'
 import { formatDuration } from '@/utils/format'
-import { buildDailySlots, roundMinutes, toMinutes } from '@/utils/time'
-
-const DURATIONS = [60, 90, 120, 150, 180, 240]
+import { fromMinutes, roundMinutes, toMinutes } from '@/utils/time'
 
 const ROUNDING_UNITS = [
   { value: '1', label: 'Per menit (tanpa pembulatan)' },
@@ -26,10 +25,10 @@ const ROUNDING_MODES = [
 ]
 
 const NUMBER_FIELDS = [
-  'staff_per_shift',
   'max_weekly_hours',
   'checkin_early_minutes',
   'late_tolerance_minutes',
+  'max_late_minutes',
   'checkout_grace_minutes',
   'qr_refresh_seconds',
 ]
@@ -58,10 +57,11 @@ function Preview({ title, children }) {
   )
 }
 
-export default function SystemSettingsForm({ initial, sampleDay, onSaved }) {
+export default function SystemSettingsForm({ initial, shifts, posts, onSaved }) {
   const toast = useToast()
   const [form, setForm] = useState(() =>
-    Object.fromEntries(Object.entries(initial).map(([key, value]) => [key, String(value)])),
+    // Angka & pilihan disimpan sebagai teks (isi input); saklar tetap boolean.
+    Object.fromEntries(Object.entries(initial).map(([key, value]) => [key, typeof value === 'boolean' ? value : String(value)])),
   )
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
@@ -69,20 +69,24 @@ export default function SystemSettingsForm({ initial, sampleDay, onSaved }) {
   const update = (field) => (event) => setForm((current) => ({ ...current, [field]: event.target.value }))
   const field = (name) => ({ value: form[name], onChange: update(name), error: errors[name], required: true })
 
-  const duration = Number(form.shift_duration_minutes)
-  const durationOptions = [...new Set([...DURATIONS, duration])]
-    .sort((a, b) => a - b)
-    .map((minutes) => ({ value: String(minutes), label: formatDuration(minutes) }))
-  const slots = sampleDay && duration ? buildDailySlots(sampleDay.open_time, sampleDay.close_time, duration) : []
-  const lastSlotShort =
-    sampleDay && duration > 0 && (toMinutes(sampleDay.close_time) - toMinutes(sampleDay.open_time)) % duration !== 0
+  const activeShifts = shifts.filter((shift) => shift.is_active)
+  const activePosts = posts.filter((post) => post.is_active)
+  const staffPerShift = activePosts.reduce((sum, post) => sum + post.capacity, 0)
+
+  // Contoh jendela presensi untuk shift aktif pertama, mengikuti angka yang sedang diketik.
+  const sample = activeShifts[0]
+  const sampleStart = sample ? toMinutes(sample.start_time) : 0
+  const sampleEnd = sample ? toMinutes(sample.end_time) : 0
+  const at = (minutes) => fromMinutes(Math.max(0, Math.min(minutes, 23 * 60 + 59)))
+  const deduct = Boolean(form.salary_deduction_enabled)
+  const checkInCloses = Math.min(sampleStart + Number(form.max_late_minutes || 0), sampleEnd)
 
   async function handleSubmit(event) {
     event.preventDefault()
     setSaving(true)
     setErrors({})
 
-    const payload = { ...form, shift_duration_minutes: duration, rounding_unit_minutes: Number(form.rounding_unit_minutes) }
+    const payload = { ...form, rounding_unit_minutes: Number(form.rounding_unit_minutes) }
     NUMBER_FIELDS.forEach((name) => {
       payload[name] = form[name] === '' ? null : Number(form[name])
     })
@@ -105,27 +109,17 @@ export default function SystemSettingsForm({ initial, sampleDay, onSaved }) {
       <form onSubmit={handleSubmit} className="divide-y divide-slate-100">
         <Section
           title="Penjadwalan shift"
-          description="Menentukan slot shift dan batas beban kerja setiap staff pada algoritma Round Robin."
+          description="Batas beban kerja setiap staff pada algoritma Round Robin. Jam shift dan pos jaga diatur di kartu Shift dan Pos jaga."
           preview={
-            sampleDay && (
-              <Preview title={`Contoh slot hari ${sampleDay.day_label} (${sampleDay.open_time}–${sampleDay.close_time})`}>
-                <div className="flex flex-wrap gap-1.5">
-                  {slots.map((slot) => (
-                    <span key={slot.start} className="rounded-md bg-white px-2 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200 tabular-nums">
-                      {slot.start}–{slot.end}
-                    </span>
-                  ))}
-                </div>
-                <p className="mt-2 text-xs text-slate-500">
-                  {slots.length} slot × {form.staff_per_shift || 0} staff per slot.
-                  {lastSlotShort && ' Slot terakhir lebih pendek karena mengikuti jam tutup.'}
-                </p>
-              </Preview>
-            )
+            <Preview title="Kebutuhan per hari operasional">
+              <p className="text-slate-700">
+                {activeShifts.length} shift × {activePosts.length} pos ={' '}
+                <span className="font-semibold">{activeShifts.length * staffPerShift} penugasan</span> per hari ({staffPerShift} staff per
+                shift).
+              </p>
+            </Preview>
           }
         >
-          <Select label="Durasi 1 shift" options={durationOptions} {...field('shift_duration_minutes')} />
-          <Input label="Jumlah staff per shift" type="number" min={1} max={10} {...field('staff_per_shift')} />
           <Input
             label="Batas jam kerja per staff per minggu"
             type="number"
@@ -136,7 +130,31 @@ export default function SystemSettingsForm({ initial, sampleDay, onSaved }) {
           />
         </Section>
 
-        <Section title="Presensi" description="Batas waktu check-in/check-out dan pergantian QR Code dinamis.">
+        <Section
+          title="Presensi"
+          description="Batas waktu check-in/check-out terhadap jam shift, dan pergantian QR Code dinamis."
+          preview={
+            sample && (
+              <Preview title={`Contoh untuk ${sample.name} (${sample.start_time}–${sample.end_time})`}>
+                <ul className="space-y-1 text-slate-700 tabular-nums">
+                  <li>
+                    Check-in dibuka <span className="font-semibold">{at(sampleStart - Number(form.checkin_early_minutes || 0))}</span>
+                  </li>
+                  <li>
+                    Tepat waktu sampai <span className="font-semibold">{at(sampleStart + Number(form.late_tolerance_minutes || 0))}</span>,
+                    setelah itu terlambat
+                  </li>
+                  <li>
+                    Check-in ditutup <span className="font-semibold">{at(checkInCloses)}</span> — lewat dari ini dianggap tidak hadir
+                  </li>
+                  <li>
+                    Check-out paling lambat <span className="font-semibold">{at(sampleEnd + Number(form.checkout_grace_minutes || 0))}</span>
+                  </li>
+                </ul>
+              </Preview>
+            )
+          }
+        >
           <Input
             label="Check-in dibuka sebelum shift"
             type="number"
@@ -150,6 +168,14 @@ export default function SystemSettingsForm({ initial, sampleDay, onSaved }) {
             min={0}
             hint="Menit. Lewat dari ini dianggap terlambat."
             {...field('late_tolerance_minutes')}
+          />
+          <Input
+            label="Maksimal keterlambatan"
+            type="number"
+            min={1}
+            max={480}
+            hint="Menit. Lewat dari ini tidak bisa check-in dan dianggap tidak hadir."
+            {...field('max_late_minutes')}
           />
           <Input
             label="Batas check-out setelah shift"
@@ -170,24 +196,50 @@ export default function SystemSettingsForm({ initial, sampleDay, onSaved }) {
 
         <Section
           title="Penggajian"
-          description="Pembulatan durasi hadir sebelum dikalikan tarif per jam."
+          description="Gaji = jam yang dibayar × tarif per jam. Tentukan apakah terlambat atau pulang lebih cepat mengurangi gaji."
           preview={
-            <Preview title="Contoh pembulatan">
-              <ul className="space-y-1 text-slate-700">
-                {[100, 115, 47].map((minutes) => (
-                  <li key={minutes} className="tabular-nums">
-                    Hadir {formatDuration(minutes)} → dibayar{' '}
-                    <span className="font-semibold">
-                      {formatDuration(roundMinutes(minutes, Number(form.rounding_unit_minutes), form.rounding_mode))}
-                    </span>
+            <Preview title={deduct ? 'Contoh pembulatan' : `Contoh${sample ? ` untuk ${sample.name}` : ''}`}>
+              {deduct ? (
+                <ul className="space-y-1 text-slate-700">
+                  {[100, 115, 47].map((minutes) => (
+                    <li key={minutes} className="tabular-nums">
+                      Hadir {formatDuration(minutes)} → dibayar{' '}
+                      <span className="font-semibold">
+                        {formatDuration(roundMinutes(minutes, Number(form.rounding_unit_minutes), form.rounding_mode))}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <ul className="space-y-1 text-slate-700">
+                  <li>
+                    Hadir (tepat waktu, terlambat, atau pulang lebih cepat) → dibayar penuh{' '}
+                    <span className="font-semibold">{formatDuration(sampleEnd - sampleStart)}</span>
                   </li>
-                ))}
-              </ul>
+                  <li>Tidak hadir → tidak dibayar</li>
+                </ul>
+              )}
             </Preview>
           }
         >
-          <Select label="Satuan pembulatan" options={ROUNDING_UNITS} {...field('rounding_unit_minutes')} />
-          <Select label="Cara pembulatan" options={ROUNDING_MODES} {...field('rounding_mode')} />
+          <div className="rounded-lg border border-slate-200 p-3 sm:col-span-2">
+            <Toggle
+              checked={deduct}
+              onChange={(checked) => setForm((current) => ({ ...current, salary_deduction_enabled: checked }))}
+              label="Potong gaji sesuai jam hadir"
+              description={
+                deduct
+                  ? 'Aktif: gaji mengikuti menit hadir, sehingga terlambat atau pulang lebih cepat mengurangi gaji.'
+                  : 'Nonaktif: tidak ada potongan gaji. Staff yang hadir dibayar penuh sepanjang jam shift.'
+              }
+            />
+          </div>
+          {deduct && (
+            <>
+              <Select label="Satuan pembulatan" options={ROUNDING_UNITS} {...field('rounding_unit_minutes')} />
+              <Select label="Cara pembulatan" options={ROUNDING_MODES} {...field('rounding_mode')} />
+            </>
+          )}
         </Section>
 
         <div className="flex justify-end pt-6">

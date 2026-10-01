@@ -11,7 +11,7 @@ use Illuminate\Database\Seeder;
 /**
  * 10 student staff dengan jadwal kuliah bervariasi dan sebagian saling bentrok.
  *
- * Skenario yang sengaja dibentuk untuk menguji algoritma (slot shift 2 jam, 08.00–17.00):
+ * Skenario yang sengaja dibentuk untuk menguji algoritma (dipakai tes dengan slot shift 2 jam, 08.00–17.00):
  *  - Rabu 08–10  : 9 dari 10 staff kuliah (hanya Nabila kosong) → slot KURANG STAFF.
  *  - Kamis 12–14 : hanya Bagus & Nabila yang kosong → tepat terpenuhi, banyak staff dilewati.
  *  - Kamis 14–16 : hanya Andi & Nabila yang kosong → tepat terpenuhi.

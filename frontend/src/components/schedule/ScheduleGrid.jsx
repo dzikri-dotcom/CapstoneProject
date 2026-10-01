@@ -1,4 +1,5 @@
 import { AlertTriangle, Plus } from 'lucide-react'
+import { Fragment } from 'react'
 import cn from '@/utils/cn'
 import { formatDate, formatDayMonth, shortName } from '@/utils/format'
 
@@ -17,7 +18,7 @@ function AssignmentChip({ assignment, warnings, editable, onClick }) {
       title={tooltip}
       aria-label={`${assignment.name}${hasWarning ? ', ada peringatan' : ''}`}
       className={cn(
-        'flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left text-xs font-medium transition',
+        'flex h-7 w-full min-w-0 items-center gap-1 rounded-md px-2 text-left text-xs font-medium transition',
         hasWarning ? 'bg-amber-50 text-amber-900 ring-1 ring-amber-300' : 'bg-slate-100 text-slate-700',
         editable ? 'hover:ring-1 hover:ring-slate-400' : 'cursor-default',
       )}
@@ -33,87 +34,156 @@ function AssignmentChip({ assignment, warnings, editable, onClick }) {
   )
 }
 
-function SlotCell({ slot, warnings, editable, onAdd, onManage }) {
-  const missing = slot.required_staff - slot.assignments.length
+/**
+ * Satu pos jaga pada satu shift: tempat sebanyak kapasitas pos, berdampingan seperti dua kolom di lembar Excel.
+ * Tempat kosong menjadi tombol "Tambah" (atau garis putus-putus bila jadwal tidak bisa diedit).
+ */
+function SlotCell({ slot, warnings, editable, onAdd, onManage, showLabel = false }) {
+  const missing = Math.max(0, slot.required_staff - slot.assignments.length)
+  const post = slot.post?.name
 
   return (
-    <div
-      className={cn(
-        'flex h-full min-h-20 flex-col gap-1 rounded-lg border p-1.5',
-        missing > 0 ? 'border-red-200 bg-red-50/70' : 'border-slate-200 bg-white',
+    <div className={cn('rounded-lg border p-1', missing > 0 ? 'border-red-200 bg-red-50/60' : 'border-slate-200 bg-white')}>
+      {showLabel && (
+        <div className="mb-1 flex items-center justify-between gap-2 px-1">
+          <span className="truncate text-[11px] font-semibold text-slate-600">{post ?? 'Slot'}</span>
+          <span className={cn('text-[11px] tabular-nums', missing > 0 ? 'font-semibold text-red-700' : 'text-slate-400')}>
+            {slot.assignments.length}/{slot.required_staff}
+          </span>
+        </div>
       )}
-    >
-      {slot.assignments.map((assignment) => (
-        <AssignmentChip
-          key={assignment.id}
-          assignment={assignment}
-          warnings={warnings[assignment.id]}
-          editable={editable}
-          onClick={() => onManage(assignment, slot)}
-        />
-      ))}
-      {missing > 0 && <span className="px-2 py-0.5 text-[11px] font-semibold text-red-700">Kurang {missing} staff</span>}
-      {editable && (
-        <button
-          type="button"
-          onClick={() => onAdd(slot)}
-          className="mt-auto flex items-center justify-center gap-1 rounded-md border border-dashed border-slate-300 py-0.5 text-[11px] text-slate-400 transition hover:border-brand-400 hover:text-brand-700"
-          aria-label={`Tambah staff ke ${slot.day_label} ${slot.start_time}`}
-        >
-          <Plus className="size-3" /> Tambah
-        </button>
-      )}
+      <div className="grid grid-cols-2 gap-1">
+        {slot.assignments.map((assignment) => (
+          <AssignmentChip
+            key={assignment.id}
+            assignment={assignment}
+            warnings={warnings[assignment.id]}
+            editable={editable}
+            onClick={() => onManage(assignment, slot)}
+          />
+        ))}
+        {Array.from({ length: missing }, (_, index) =>
+          editable ? (
+            <button
+              key={`empty-${index}`}
+              type="button"
+              onClick={() => onAdd(slot)}
+              className="flex h-7 items-center justify-center gap-1 rounded-md border border-dashed border-red-300 text-[11px] text-red-500 transition hover:border-brand-500 hover:bg-white hover:text-brand-700"
+              aria-label={`Tambah staff ke ${slot.day_label} ${slot.start_time}${post ? ` ${post}` : ''}`}
+              title="Kurang staff — klik untuk menambah"
+            >
+              <Plus className="size-3" /> Tambah
+            </button>
+          ) : (
+            <span key={`empty-${index}`} className="h-7 rounded-md border border-dashed border-red-200" aria-label="Kosong" />
+          ),
+        )}
+      </div>
     </div>
   )
 }
 
 /**
- * Tabel jadwal: kolom = tanggal, baris = jam slot (desktop); daftar per hari (HP).
+ * Tabel jadwal seperti lembar SOP: baris = hari & shift, kolom = pos jaga yang dikelompokkan per lokasi (desktop);
+ * daftar per hari (HP).
  */
 export default function ScheduleGrid({ slots, warnings = {}, editable = true, onAdd, onManage }) {
   const dates = [...new Set(slots.map((slot) => slot.date))]
-  const times = [...new Map(slots.map((slot) => [slot.start_time, slot.end_time])).entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([start, end]) => ({ start, end }))
-  const byKey = new Map(slots.map((slot) => [`${slot.date}|${slot.start_time}`, slot]))
   const dayLabel = Object.fromEntries(slots.map((slot) => [slot.date, slot.day_label]))
   const cellProps = { warnings, editable, onAdd, onManage }
+
+  const shifts = [...new Map(slots.map((slot) => [`${slot.start_time}|${slot.end_time}`, slot])).values()]
+    .map((slot) => ({ key: `${slot.start_time}|${slot.end_time}`, start: slot.start_time, end: slot.end_time, name: slot.shift?.name }))
+    .sort((a, b) => a.key.localeCompare(b.key))
+
+  // Kolom pos mengikuti urutan dari server. Jadwal lama tanpa pos memakai satu kolom "Staff".
+  const postKey = (slot) => slot.post?.name ?? ''
+  const posts = [...new Map(slots.map((slot) => [postKey(slot), slot.post])).entries()].map(([key, post]) => ({
+    key,
+    name: post?.name ?? 'Staff',
+    location: post?.location ?? null,
+  }))
+  const hasLocations = posts.some((post) => post.location)
+  // Pos bersebelahan dengan lokasi yang sama digabung dalam satu judul (Gedung A: Pos 1, Pos 2).
+  const locationGroups = posts.reduce((groups, post) => {
+    const last = groups[groups.length - 1]
+    if (last && last.location === post.location) last.span += 1
+    else groups.push({ location: post.location, span: 1 })
+    return groups
+  }, [])
+
+  const byCell = new Map(slots.map((slot) => [`${slot.date}|${slot.start_time}|${slot.end_time}|${postKey(slot)}`, slot]))
+  const slotFor = (date, shift, post) => byCell.get(`${date}|${shift.key}|${post.key}`)
+  const shiftsOn = (date) => shifts.filter((shift) => posts.some((post) => slotFor(date, shift, post)))
 
   return (
     <>
       <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[720px] table-fixed border-separate border-spacing-1.5">
+        <table className="w-full min-w-[820px] border-separate border-spacing-0 text-sm">
           <thead>
-            <tr>
-              <th className="w-20" />
-              {dates.map((date) => (
-                <th key={date} className="pb-1 text-left font-normal">
-                  <span className="block text-sm font-semibold text-slate-800">{dayLabel[date]}</span>
-                  <span className="text-xs text-slate-500">{formatDayMonth(date)}</span>
+            {hasLocations && (
+              <tr>
+                <th colSpan={2} />
+                {locationGroups.map((group, index) => (
+                  <th
+                    key={`${group.location}-${index}`}
+                    colSpan={group.span}
+                    className="border-b border-slate-200 px-2 pb-1.5 text-center text-xs font-medium text-slate-500"
+                  >
+                    {group.location ?? ''}
+                  </th>
+                ))}
+              </tr>
+            )}
+            <tr className="text-xs text-slate-500">
+              <th className="w-24 px-2 py-2 text-left font-medium">Hari</th>
+              <th className="w-32 px-2 py-2 text-left font-medium">Shift</th>
+              {posts.map((post) => (
+                <th key={post.key} className="px-2 py-2 text-center font-semibold text-slate-700">
+                  {post.name}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {times.map((time) => (
-              <tr key={time.start}>
-                <th className="pr-1 text-right align-top text-xs font-medium text-slate-500 tabular-nums">
-                  <div className="pt-1.5">
-                    {time.start}
-                    <br />
-                    <span className="text-slate-400">{time.end}</span>
-                  </div>
-                </th>
-                {dates.map((date) => {
-                  const slot = byKey.get(`${date}|${time.start}`)
-                  return (
-                    <td key={date} className="h-px align-top">
-                      {slot ? <SlotCell slot={slot} {...cellProps} /> : <div className="h-full rounded-lg bg-slate-50" />}
-                    </td>
-                  )
-                })}
-              </tr>
-            ))}
+            {dates.map((date) => {
+              const dayShifts = shiftsOn(date)
+              return (
+                <Fragment key={date}>
+                  {dayShifts.map((shift, index) => (
+                    <tr key={`${date}-${shift.key}`} className="group">
+                      {index === 0 && (
+                        <th
+                          rowSpan={dayShifts.length}
+                          className="border-t border-slate-200 px-2 py-2 text-left align-top font-normal"
+                          scope="rowgroup"
+                        >
+                          <span className="block font-semibold text-slate-800">{dayLabel[date]}</span>
+                          <span className="text-xs text-slate-500">{formatDayMonth(date)}</span>
+                        </th>
+                      )}
+                      <th
+                        className={cn('px-2 py-1 text-left align-middle font-normal', index === 0 && 'border-t border-slate-200')}
+                        scope="row"
+                      >
+                        {shift.name && <span className="block text-xs font-semibold text-slate-700">{shift.name}</span>}
+                        <span className="text-xs text-slate-500 tabular-nums">
+                          {shift.start}–{shift.end}
+                        </span>
+                      </th>
+                      {posts.map((post) => {
+                        const slot = slotFor(date, shift, post)
+                        return (
+                          <td key={post.key} className={cn('min-w-44 px-1 py-1 align-middle', index === 0 && 'border-t border-slate-200')}>
+                            {slot ? <SlotCell slot={slot} {...cellProps} /> : <div className="h-9 rounded-lg bg-slate-50" />}
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  ))}
+                </Fragment>
+              )
+            })}
           </tbody>
         </table>
       </div>
@@ -124,21 +194,21 @@ export default function ScheduleGrid({ slots, warnings = {}, editable = true, on
             <p className="mb-2 text-sm font-semibold text-slate-800">
               {dayLabel[date]}, {formatDate(date)}
             </p>
-            <div className="space-y-2">
-              {slots
-                .filter((slot) => slot.date === date)
-                .map((slot) => (
-                  <div key={slot.id} className="flex gap-3">
-                    <span className="w-12 shrink-0 pt-1.5 text-xs text-slate-500 tabular-nums">
-                      {slot.start_time}
-                      <br />
-                      {slot.end_time}
-                    </span>
-                    <div className="flex-1">
-                      <SlotCell slot={slot} {...cellProps} />
-                    </div>
+            <div className="space-y-3">
+              {shiftsOn(date).map((shift) => (
+                <div key={shift.key}>
+                  <p className="mb-1.5 text-xs font-medium text-slate-500 tabular-nums">
+                    {shift.name && <span className="font-semibold text-slate-700">{shift.name} · </span>}
+                    {shift.start}–{shift.end}
+                  </p>
+                  <div className="grid gap-1.5 sm:grid-cols-2">
+                    {posts.map((post) => {
+                      const slot = slotFor(date, shift, post)
+                      return slot ? <SlotCell key={post.key} slot={slot} showLabel {...cellProps} /> : null
+                    })}
                   </div>
-                ))}
+                </div>
+              ))}
             </div>
           </section>
         ))}

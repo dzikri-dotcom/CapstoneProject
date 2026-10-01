@@ -68,7 +68,7 @@ export default function CorrectionModal({ item, onClose, onSaved }) {
       open
       onClose={saving ? undefined : onClose}
       title={`Koreksi presensi ${item.staff?.name ?? ''}`}
-      description={`${formatShortDate(item.date)} · shift ${item.start_time}–${item.end_time} · terlambat jika check-in setelah ${item.late_after}`}
+      description={`${formatShortDate(item.date)} · shift ${item.start_time}–${item.end_time}${item.post_name ? ` · ${item.post_name}` : ''} · terlambat jika check-in setelah ${item.late_after}`}
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={saving}>

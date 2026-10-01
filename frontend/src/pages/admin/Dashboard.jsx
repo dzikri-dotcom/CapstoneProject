@@ -169,9 +169,10 @@ export default function Dashboard() {
             {data.today_slots.length ? (
               <ul className="divide-y divide-slate-100">
                 {data.today_slots.map((slot) => (
-                  <li key={slot.start_time} className="flex flex-col gap-2 px-5 py-3 sm:flex-row sm:items-start">
-                    <p className="w-28 shrink-0 pt-0.5 font-medium text-slate-700 tabular-nums">
+                  <li key={slot.id} className="flex flex-col gap-2 px-5 py-3 sm:flex-row sm:items-start">
+                    <p className="w-32 shrink-0 pt-0.5 font-medium text-slate-700 tabular-nums">
                       {slot.start_time}–{slot.end_time}
+                      {slot.post_name && <span className="block text-xs font-normal text-slate-500">{slot.post_name}</span>}
                     </p>
                     <ul className="flex-1 space-y-1.5">
                       {slot.staff.map((item) => (
@@ -209,6 +210,7 @@ export default function Dashboard() {
                     >
                       <span className="text-slate-700">
                         {formatShortDate(slot.date)} · {slot.start_time}–{slot.end_time}
+                        {slot.post_name && ` · ${slot.post_name}`}
                       </span>
                       <span className="text-xs font-medium text-red-600">kurang {slot.missing}</span>
                     </Link>

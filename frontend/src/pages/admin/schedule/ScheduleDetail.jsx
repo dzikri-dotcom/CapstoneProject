@@ -218,7 +218,8 @@ export default function ScheduleDetail() {
           )}
           {understaffed.length > 0 && (
             <Alert variant="warning" title={`${understaffed.length} slot kurang staff`}>
-              {understaffed.map(slotLabel).join('; ')}. Tidak ada cukup staff yang kosong setelah seluruh antrian dicek.
+              {understaffed.slice(0, 4).map(slotLabel).join('; ')}
+              {understaffed.length > 4 && `; dan ${understaffed.length - 4} slot lainnya`}. Tidak ada cukup staff yang kosong setelah seluruh antrian dicek.
               Klik <strong>Tambah</strong> pada slot bertanda merah untuk mengisi secara manual.
             </Alert>
           )}

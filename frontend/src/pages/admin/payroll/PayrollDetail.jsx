@@ -43,10 +43,13 @@ const ACTIONS = {
   },
 }
 
-function roundingLabel(snapshot) {
+/** Aturan yang dipakai saat periode ini dihitung (tersimpan bersama hasil hitungnya). */
+function ruleLabel(snapshot) {
   if (!snapshot) return null
-  if (snapshot.rounding_unit_minutes <= 1) return 'per menit (tanpa pembulatan)'
-  return `per ${snapshot.rounding_unit_minutes} menit, ${snapshot.rounding_mode === 'nearest' ? 'ke terdekat' : 'ke bawah'}`
+  // Periode lama belum menyimpan aturan potongan: saat itu gaji selalu mengikuti menit hadir.
+  if (snapshot.salary_deduction_enabled === false) return 'Tanpa potongan gaji (hadir dibayar penuh)'
+  if (snapshot.rounding_unit_minutes <= 1) return 'Sesuai jam hadir, per menit (tanpa pembulatan)'
+  return `Sesuai jam hadir, dibulatkan per ${snapshot.rounding_unit_minutes} menit ${snapshot.rounding_mode === 'nearest' ? 'ke terdekat' : 'ke bawah'}`
 }
 
 export default function PayrollDetail() {
@@ -117,7 +120,7 @@ export default function PayrollDetail() {
           <span className="flex flex-wrap items-center gap-2">
             <PayrollStatusBadge status={period.status} />
             {calculated && <span>Dihitung {formatDateTime(period.calculated_at)}</span>}
-            {roundingLabel(period.settings_snapshot) && <span>· Pembulatan {roundingLabel(period.settings_snapshot)}</span>}
+            {ruleLabel(period.settings_snapshot) && <span>· {ruleLabel(period.settings_snapshot)}</span>}
           </span>
         }
         actions={

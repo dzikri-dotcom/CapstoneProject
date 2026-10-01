@@ -28,7 +28,7 @@ class SchedulePeriod extends Model
 
     public function shiftSlots(): HasMany
     {
-        return $this->hasMany(ShiftSlot::class)->orderBy('date')->orderBy('start_time');
+        return $this->hasMany(ShiftSlot::class)->orderBy('date')->orderBy('start_time')->orderBy('id');
     }
 
     public function shiftAssignments(): HasManyThrough

@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * Shift milik staff yang login, beserta rekan satu shift.
+ * Shift milik staff yang login, beserta rekan satu pos.
  *
  * @mixin ShiftAssignment
  */
@@ -22,6 +22,9 @@ class StaffShiftResource extends JsonResource
             'id' => $this->id,
             'date' => $slot->date->toDateString(),
             'day_label' => DayOfWeek::from($slot->date->dayOfWeekIso)->label(),
+            'shift_name' => $slot->shift_name,
+            'post_name' => $slot->post_name,
+            'post_location' => $slot->post_location,
             'start_time' => substr($slot->start_time, 0, 5),
             'end_time' => substr($slot->end_time, 0, 5),
             'duration_minutes' => $slot->durationMinutes(),

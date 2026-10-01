@@ -146,6 +146,7 @@ export default function AttendanceMonitor() {
                     <tr key={item.assignment_id} className="hover:bg-slate-50/60">
                       <td className="px-4 py-3 font-medium whitespace-nowrap text-slate-700 tabular-nums">
                         {item.start_time}–{item.end_time}
+                        {item.post_name && <span className="font-normal text-slate-500"> · {item.post_name}</span>}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-slate-800">{item.staff?.name}</td>
                       <td className="px-4 py-3">
@@ -185,7 +186,7 @@ export default function AttendanceMonitor() {
                     <div>
                       <p className="font-medium text-slate-900">{item.staff?.name}</p>
                       <p className="text-xs text-slate-500 tabular-nums">
-                        Shift {item.start_time}–{item.end_time} · masuk {item.attendance?.check_in_time ?? '—'} · pulang{' '}
+                        Shift {item.start_time}–{item.end_time}{item.post_name ? ` · ${item.post_name}` : ''} · masuk {item.attendance?.check_in_time ?? '—'} · pulang{' '}
                         {item.attendance?.check_out_time ?? '—'}
                       </p>
                     </div>

@@ -88,6 +88,7 @@ export default function AttendanceHistory() {
                   <p className="font-medium text-slate-900">{formatShortDate(item.date)}</p>
                   <p className="text-sm text-slate-500 tabular-nums">
                     Shift {item.start_time}–{item.end_time}
+                    {item.post_name && ` · ${item.post_name}`}
                   </p>
                 </div>
                 <AttendanceBadges item={item} />

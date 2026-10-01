@@ -9,7 +9,7 @@ use Illuminate\Database\Seeder;
 class OperationalHourSeeder extends Seeder
 {
     /**
-     * Senin–Jumat 08.00–17.00 aktif; Sabtu & Minggu tersedia tetapi nonaktif.
+     * Senin–Jumat 06.30–19.30 aktif (mencakup Shift 1 s.d. Shift 5); Sabtu & Minggu tersedia tetapi nonaktif.
      */
     public function run(): void
     {
@@ -18,8 +18,8 @@ class OperationalHourSeeder extends Seeder
                 ['day_of_week' => $day->value],
                 [
                     'is_active' => $day->value <= DayOfWeek::Friday->value,
-                    'open_time' => '08:00:00',
-                    'close_time' => '17:00:00',
+                    'open_time' => '06:30:00',
+                    'close_time' => '19:30:00',
                 ],
             );
         }

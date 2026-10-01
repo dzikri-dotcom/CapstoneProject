@@ -50,6 +50,32 @@ class RoundRobinSchedulerTest extends TestCase
         ];
     }
 
+    /** Slot pos jaga: beberapa pos pada jam yang sama. */
+    private function postSlot(string $date, string $start, string $end, string $post, int $required = 2): array
+    {
+        return [...$this->slot($date, $start, $end, $required), 'key' => "{$date} {$start} {$post}", 'post_name' => $post];
+    }
+
+    /**
+     * Slot seperti SlotBuilder: shift 2 jam sepanjang 08:00–17:00 dengan satu pos berisi 2 orang.
+     *
+     * @param  list<int>  $days  hari aktif (1 = Senin)
+     */
+    private function twoHourSlots(string $from, string $to, array $days): array
+    {
+        $shifts = array_map(fn (array $t) => [
+            'id' => null, 'name' => "Shift {$t[0]}", 'start' => Time::toMinutes($t[0]), 'end' => Time::toMinutes($t[1]),
+        ], [['08:00', '10:00'], ['10:00', '12:00'], ['12:00', '14:00'], ['14:00', '16:00'], ['16:00', '17:00']]);
+
+        return SlotBuilder::build(
+            Carbon::parse($from),
+            Carbon::parse($to),
+            array_fill_keys($days, ['open' => 8 * 60, 'close' => 17 * 60]),
+            $shifts,
+            [['id' => 1, 'name' => 'Pos 1', 'capacity' => 2]],
+        );
+    }
+
     private function scheduler(int $maxHours = 40): RoundRobinScheduler
     {
         return new RoundRobinScheduler($maxHours * self::HOURS);
@@ -239,8 +265,7 @@ class RoundRobinSchedulerTest extends TestCase
     public function test_distribusi_shift_merata_jika_ketersediaan_sama(): void
     {
         $staff = array_map(fn (int $id) => $this->staff($id, "Staff {$id}"), range(1, 10));
-        $hours = array_fill_keys(range(1, 5), ['open' => 8 * 60, 'close' => 17 * 60]);
-        $slots = SlotBuilder::build(Carbon::parse('2026-09-28'), Carbon::parse('2026-10-02'), $hours, 120, 2);
+        $slots = $this->twoHourSlots('2026-09-28', '2026-10-02', range(1, 5));
 
         $result = $this->scheduler()->run($slots, $staff);
 
@@ -259,14 +284,79 @@ class RoundRobinSchedulerTest extends TestCase
             $this->staff(2, 'B'),
             $this->staff(3, 'C', [1 => [['13:00', '15:00']]]),
         ];
-        $hours = [1 => ['open' => 8 * 60, 'close' => 17 * 60]];
-        $slots = SlotBuilder::build(Carbon::parse('2026-09-28'), Carbon::parse('2026-09-28'), $hours, 120, 2);
+        $slots = $this->twoHourSlots('2026-09-28', '2026-09-28', [1]);
 
         $first = $this->scheduler(6)->run($slots, $staff, startStaffId: 2);
         $second = $this->scheduler(6)->run($slots, $staff, startStaffId: 2);
 
         $this->assertSame($first->assignments, $second->assignments);
         $this->assertSame($first->logs, $second->logs);
+    }
+
+    public function test_batas_jam_mingguan_khusus_staff_menggantikan_batas_umum(): void
+    {
+        // Batas umum 4 jam/minggu; Budi punya batas khusus 8 jam, Citra hanya 2 jam.
+        $staff = [
+            $this->staff(1, 'Andi'),
+            [...$this->staff(2, 'Budi'), 'max_minutes' => 8 * self::HOURS],
+            [...$this->staff(3, 'Citra'), 'max_minutes' => 2 * self::HOURS],
+        ];
+        $slots = [
+            $this->slot('2026-09-28', '08:00', '12:00', 3),
+            $this->slot('2026-09-29', '08:00', '12:00', 3),
+        ];
+
+        $result = $this->scheduler(4)->run($slots, $staff);
+
+        $this->assertSame([1, 2], $result->assignments['2026-09-28 08:00']); // Citra: 4 jam > batas 2 jam
+        $this->assertSame([2], $result->assignments['2026-09-29 08:00']);    // Andi sudah 4 jam; Budi masih boleh sampai 8 jam
+
+        $citra = $this->checksFor($result, '2026-09-28 08:00')[2];
+        $this->assertSame(SkipReason::MaxWeeklyHours, $citra['reason']);
+        $this->assertSame('Citra dilewati: 0 menit + 4 jam melebihi batas 2 jam per minggu.', $citra['message']);
+    }
+
+    public function test_tiga_pos_pada_shift_yang_sama_diisi_staff_berbeda(): void
+    {
+        $staff = array_map(fn (int $id) => $this->staff($id, "Staff {$id}"), range(1, 6));
+        $slots = [
+            $this->postSlot('2026-09-28', '08:00', '12:00', 'Pos 1'),
+            $this->postSlot('2026-09-28', '08:00', '12:00', 'Pos 2'),
+            $this->postSlot('2026-09-28', '08:00', '12:00', 'Pos 3'),
+        ];
+
+        $result = $this->scheduler()->run($slots, $staff);
+
+        // Giliran berlanjut dari pos ke pos: 2 orang per pos, tidak ada yang dobel.
+        $this->assertSame([[1, 2], [3, 4], [5, 6]], array_values($result->assignments));
+        $this->assertSame([], $result->understaffed);
+    }
+
+    public function test_staff_tidak_ditugaskan_di_dua_pos_pada_jam_yang_sama(): void
+    {
+        // 4 staff untuk 3 pos × 2 orang: pos ke-3 tidak bisa mengambil lagi staff dari pos 1 & 2.
+        $staff = array_map(fn (int $id) => $this->staff($id, "Staff {$id}"), range(1, 4));
+        $slots = [
+            $this->postSlot('2026-09-28', '08:00', '12:00', 'Pos 1'),
+            $this->postSlot('2026-09-28', '08:00', '12:00', 'Pos 2'),
+            $this->postSlot('2026-09-28', '08:00', '12:00', 'Pos 3'),
+            $this->postSlot('2026-09-28', '13:00', '17:00', 'Pos 1'),
+        ];
+
+        $result = $this->scheduler()->run($slots, $staff);
+
+        $this->assertSame([1, 2], $result->assignments['2026-09-28 08:00 Pos 1']);
+        $this->assertSame([3, 4], $result->assignments['2026-09-28 08:00 Pos 2']);
+        $this->assertSame([], $result->assignments['2026-09-28 08:00 Pos 3']);
+        $this->assertSame(['2026-09-28 08:00 Pos 3' => 2], $result->understaffed);
+
+        $checks = $this->checksFor($result, '2026-09-28 08:00 Pos 3');
+        $this->assertCount(4, $checks);
+        $this->assertSame(SkipReason::ShiftConflict, $checks[0]['reason']);
+        $this->assertSame('Staff 1 dilewati: sudah bertugas di Pos 1 08:00–12:00.', $checks[0]['message']);
+
+        // Shift berikutnya tidak beririsan, jadi staff yang sama boleh bertugas lagi.
+        $this->assertSame([1, 2], $result->assignments['2026-09-28 13:00 Pos 1']);
     }
 
     public function test_tanpa_staff_aktif_semua_slot_kurang_staff(): void

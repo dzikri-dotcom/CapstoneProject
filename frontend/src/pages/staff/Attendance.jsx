@@ -38,7 +38,18 @@ function ShiftSummary({ item, children }) {
         <p className="text-lg font-semibold text-slate-900 tabular-nums">
           {item.start_time}–{item.end_time}
         </p>
-        <p className="text-sm text-slate-500">{formatShortDate(item.date)}</p>
+        <p className="text-sm text-slate-500">
+          {formatShortDate(item.date)}
+          {item.post_name && (
+            <>
+              {' · '}
+              <span className="font-medium text-slate-700">
+                {item.post_name}
+                {item.post_location && `, ${item.post_location}`}
+              </span>
+            </>
+          )}
+        </p>
         <div className="mt-2">{children}</div>
       </div>
     </div>
@@ -180,7 +191,8 @@ export default function Attendance() {
           <ShiftSummary item={status.check_in}>
             <p className="text-sm text-slate-600">
               Check-in dibuka sejak {status.check_in.check_in_opens}. Lewat pukul <strong>{status.check_in.late_after}</strong>{' '}
-              dianggap terlambat.
+              dianggap terlambat, dan check-in ditutup pukul <strong>{status.check_in.check_in_closes}</strong> (lewat dari itu
+              dianggap tidak hadir).
             </p>
           </ShiftSummary>
         </Card>
@@ -219,6 +231,7 @@ export default function Attendance() {
                 <div>
                   <p className="font-medium text-slate-800 tabular-nums">
                     {item.start_time}–{item.end_time}
+                    {item.post_name && <span className="font-normal text-slate-500"> · {item.post_name}</span>}
                   </p>
                   <p className="text-xs text-slate-500 tabular-nums">
                     Masuk {item.attendance?.check_in_time ?? '—'} · Pulang {item.attendance?.check_out_time ?? '—'}

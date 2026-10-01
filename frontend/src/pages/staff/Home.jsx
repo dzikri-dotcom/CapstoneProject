@@ -49,11 +49,12 @@ function ShiftCard({ data }) {
         </p>
         <p className="mt-1.5 text-lg font-semibold text-slate-900 tabular-nums">
           {data.current.start_time}–{data.current.end_time}
+          {data.current.post_name && <span className="text-sm font-normal text-slate-500"> · {data.current.post_name}</span>}
         </p>
         <p className="mt-0.5 text-[13px] text-slate-600">
           {checkedIn
             ? `Check-in ${checkedIn}. Jangan lupa check-out sebelum ${data.current.check_out_closes}.`
-            : `Segera check-in — lewat ${data.current.late_after} dianggap terlambat.`}
+            : `Segera check-in — lewat ${data.current.late_after} dianggap terlambat, ditutup ${data.current.check_in_closes}.`}
         </p>
         <span className="mt-3 inline-flex items-center gap-1 text-[13px] font-medium text-brand-700">
           Buka presensi <ChevronRight className="size-4 transition-transform group-hover:translate-x-0.5" />
@@ -76,6 +77,7 @@ function ShiftCard({ data }) {
         <>
           <p className="mt-1.5 text-lg font-semibold text-slate-900 tabular-nums">
             {data.next.start_time}–{data.next.end_time}
+            {data.next.post_name && <span className="text-sm font-normal text-slate-500"> · {data.next.post_name}</span>}
           </p>
           <p className="mt-0.5 flex items-center gap-1.5 text-[13px] text-slate-600">
             <Clock className="size-3.5 text-slate-400" />

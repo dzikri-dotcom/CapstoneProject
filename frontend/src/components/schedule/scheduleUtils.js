@@ -1,8 +1,9 @@
 import { formatShortDate } from '@/utils/format'
 
-/** "Sen, 28 Sep · 08:00–10:00" */
+/** "Sen, 28 Sep · 08:00–12:00 · Pos 1" */
 export function slotLabel(slot) {
-  return `${formatShortDate(slot.date)} · ${slot.start_time}–${slot.end_time}`
+  const post = slot.post?.name ?? slot.post_name
+  return `${formatShortDate(slot.date)} · ${slot.start_time}–${slot.end_time}${post ? ` · ${post}` : ''}`
 }
 
 /**

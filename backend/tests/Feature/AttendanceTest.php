@@ -21,6 +21,7 @@ use Tests\TestCase;
 
 /**
  * Pengaturan bawaan: check-in dibuka 15 menit sebelum shift, toleransi terlambat 10 menit,
+ * maksimal keterlambatan 30 menit (lewat dari itu tidak bisa check-in),
  * check-out paling lambat 30 menit setelah shift, token QR berganti tiap 30 detik (+10 detik toleransi).
  * Shift uji: Senin 28 Sep 2026, 08:00–10:00.
  */
@@ -97,6 +98,53 @@ class AttendanceTest extends TestCase
         $this->travelTo('2026-09-28 08:11:00'); // lewat toleransi
         $this->checkIn()->assertOk()->assertJsonPath('message', 'Check-in berhasil pukul 08:11 — Terlambat.');
         $this->assertSame(AttendanceStatus::Late, $this->attendance()->status);
+    }
+
+    public function test_check_in_masih_diterima_sampai_batas_maksimal_keterlambatan(): void
+    {
+        $this->travelTo('2026-09-28 08:29:00'); // 29 menit terlambat, batas 30 menit
+
+        $this->checkIn()->assertOk()->assertJsonPath('message', 'Check-in berhasil pukul 08:29 — Terlambat.');
+        $this->assertSame(AttendanceStatus::Late, $this->attendance()->status);
+    }
+
+    public function test_check_in_ditolak_setelah_maksimal_keterlambatan(): void
+    {
+        $this->travelTo('2026-09-28 08:30:00'); // tepat di batas → check-in sudah ditutup
+
+        $this->checkIn()
+            ->assertStatus(422)
+            ->assertJsonPath(
+                'errors.attendance.0',
+                'Batas maksimal keterlambatan untuk shift 08:00–10:00 sudah lewat (check-in ditutup pukul 08:30). Hubungi koordinator jika perlu koreksi.',
+            );
+        $this->assertNull($this->attendance());
+
+        Sanctum::actingAs($this->staff->user);
+        $this->getJson('/api/staff/attendance/current')
+            ->assertOk()
+            ->assertJsonPath('data.check_in', null)
+            ->assertJsonPath('data.today.0.state', 'missed')
+            ->assertJsonPath('data.today.0.check_in_closes', '08:30');
+    }
+
+    public function test_maksimal_keterlambatan_bisa_diatur_admin(): void
+    {
+        Sanctum::actingAs(User::factory()->admin()->create());
+        $settings = array_map(fn ($default) => $default['value'], \App\Models\Setting::DEFAULTS);
+        $this->putJson('/api/admin/settings', [...$settings, 'max_late_minutes' => 60])->assertOk();
+
+        $this->travelTo('2026-09-28 08:45:00');
+        $this->checkIn()->assertOk();
+        $this->assertSame(AttendanceStatus::Late, $this->attendance()->status);
+    }
+
+    public function test_maksimal_keterlambatan_tidak_melewati_jam_selesai_shift(): void
+    {
+        app(\App\Services\SettingService::class)->update(['max_late_minutes' => 480]);
+
+        $this->travelTo('2026-09-28 10:00:00'); // shift 08:00–10:00 sudah selesai
+        $this->checkIn()->assertStatus(422);
     }
 
     public function test_check_in_sebelum_jendela_dibuka_ditolak(): void

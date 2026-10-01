@@ -34,6 +34,38 @@ class StaffManagementTest extends TestCase
         ], $overrides);
     }
 
+    public function test_admin_mengatur_batas_jam_mingguan_khusus_staff(): void
+    {
+        $staff = StaffProfile::factory()->create();
+        $payload = [
+            'name' => $staff->user->name,
+            'email' => $staff->user->email,
+            'nim' => $staff->nim,
+            'study_program' => $staff->study_program,
+            'is_active' => true,
+        ];
+
+        // Kosong = mengikuti batas umum di Pengaturan (bawaan 40 jam).
+        $this->getJson("/api/admin/staff/{$staff->id}")
+            ->assertOk()
+            ->assertJsonPath('data.max_weekly_hours', null)
+            ->assertJsonPath('data.effective_max_weekly_hours', 40);
+
+        $this->putJson("/api/admin/staff/{$staff->id}", [...$payload, 'max_weekly_hours' => 20])
+            ->assertOk()
+            ->assertJsonPath('data.max_weekly_hours', 20)
+            ->assertJsonPath('data.effective_max_weekly_hours', 20);
+
+        $this->putJson("/api/admin/staff/{$staff->id}", [...$payload, 'max_weekly_hours' => 0])
+            ->assertStatus(422)
+            ->assertJsonPath('errors.max_weekly_hours.0', 'Batas jam per minggu harus bernilai antara 1 sampai 60.');
+
+        // Dikosongkan lagi → kembali mengikuti batas umum.
+        $this->putJson("/api/admin/staff/{$staff->id}", [...$payload, 'max_weekly_hours' => null])
+            ->assertOk()
+            ->assertJsonPath('data.max_weekly_hours', null);
+    }
+
     public function test_daftar_staff_bisa_dicari_dan_difilter(): void
     {
         StaffProfile::factory()->create(['nim' => '1111111111'])->user->update(['name' => 'Budi Santoso']);

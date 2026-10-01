@@ -38,9 +38,10 @@ export default function PayrollPeriods() {
       <div className="mb-6 flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
         <Sigma className="mt-0.5 size-5 shrink-0 text-brand-600" />
         <p>
-          <strong className="text-slate-800">Total Gaji = Σ (durasi hadir pada setiap slot jam × tarif slot jam tersebut)</strong>
-          . Durasi hadir = check-in s.d. check-out yang dibatasi di dalam jam shift, lalu dibulatkan sesuai pengaturan. Tarif
-          mengikuti versi yang berlaku pada tanggal shift.
+          <strong className="text-slate-800">Total Gaji = Σ (jam yang dibayar pada setiap slot jam × tarif slot jam tersebut)</strong>
+          . Tanpa potongan gaji, staff yang hadir dibayar penuh sepanjang jam shift. Jika potongan diaktifkan di Pengaturan,
+          jam yang dibayar mengikuti check-in s.d. check-out lalu dibulatkan. Tarif mengikuti versi yang berlaku pada tanggal
+          shift.
         </p>
       </div>
 

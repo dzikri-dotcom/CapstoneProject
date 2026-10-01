@@ -1,4 +1,4 @@
-import { CalendarRange, GraduationCap, IdCard, KeyRound, Mail, Pencil, Phone } from 'lucide-react'
+import { CalendarRange, GraduationCap, Hourglass, IdCard, KeyRound, Mail, Pencil, Phone } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useParams } from 'react-router'
 import AvailabilityTimeline from '@/components/schedule/AvailabilityTimeline'
@@ -107,6 +107,10 @@ export default function StaffDetail() {
               </InfoRow>
               <InfoRow icon={Phone} label="No. HP">
                 {staff.phone ?? '-'}
+              </InfoRow>
+              <InfoRow icon={Hourglass} label="Batas jam per minggu">
+                {staff.effective_max_weekly_hours} jam
+                <span className="text-slate-400"> · {staff.max_weekly_hours ? 'batas khusus' : 'mengikuti batas umum'}</span>
               </InfoRow>
               <InfoRow icon={CalendarRange} label="Terdaftar sejak">
                 {formatDate(staff.created_at)}

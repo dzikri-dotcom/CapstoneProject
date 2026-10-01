@@ -33,7 +33,7 @@ class AttendanceController extends Controller
             ->whereHas('shiftSlot', fn (Builder $slot) => $slot->where('date', $date))
             ->with(['shiftSlot', 'attendance.corrector:id,name', 'staffProfile.user:id,name'])
             ->get()
-            ->sortBy(fn (ShiftAssignment $a) => $a->shiftSlot->start_time.' '.$a->staffProfile->user->name)
+            ->sortBy(fn (ShiftAssignment $a) => sprintf('%s %010d %s', $a->shiftSlot->start_time, $a->shiftSlot->post_id ?? 0, $a->staffProfile->user->name))
             ->values();
 
         $states = $assignments->mapWithKeys(fn (ShiftAssignment $a) => [$a->id => $this->attendance->state($a, $now)]);

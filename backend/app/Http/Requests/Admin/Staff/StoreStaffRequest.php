@@ -30,8 +30,16 @@ class StoreStaffRequest extends FormRequest
             'nim' => ['required', 'string', 'alpha_num', 'max:20', Rule::unique('staff_profiles', 'nim')],
             'phone' => ['nullable', 'string', 'max:20', 'regex:'.self::PHONE_REGEX],
             'study_program' => ['required', 'string', 'max:100'],
+            'max_weekly_hours' => ['nullable', 'integer', 'between:1,60'],
             'password' => ['required', 'string', 'min:8'],
             'is_active' => ['sometimes', 'boolean'],
+        ];
+    }
+
+    public function attributes(): array
+    {
+        return [
+            'max_weekly_hours' => 'batas jam per minggu',
         ];
     }
 }

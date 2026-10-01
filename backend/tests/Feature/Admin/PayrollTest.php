@@ -23,6 +23,9 @@ use Tests\TestCase;
 /**
  * Tarif seeder: s.d. 31 Jul 2026 semua jam Rp10.000; mulai 1 Agu 2026 Rp11.000 (16–17 Rp13.500).
  * Pembulatan bawaan: per 30 menit ke bawah.
+ *
+ * Tes di kelas ini menguji aturan "gaji mengikuti menit hadir", sehingga potongan gaji diaktifkan.
+ * Aturan bawaan (tanpa potongan) diuji di PayrollNoDeductionTest.
  */
 class PayrollTest extends TestCase
 {
@@ -40,6 +43,7 @@ class PayrollTest extends TestCase
 
         $this->travelTo('2026-10-05 09:00:00');
         $this->seed([SettingSeeder::class, OperationalHourSeeder::class, HourlyRateSeeder::class]);
+        Setting::where('key', 'salary_deduction_enabled')->update(['value' => '1']);
 
         $this->admin = User::factory()->admin()->create();
         $this->andi = StaffProfile::factory()->create();

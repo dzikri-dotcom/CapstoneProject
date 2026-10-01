@@ -18,11 +18,12 @@ function initialForm(staff) {
       nim: staff.nim,
       phone: staff.phone ?? '',
       study_program: staff.study_program,
+      max_weekly_hours: staff.max_weekly_hours ?? '',
       password: '',
       is_active: staff.is_active,
     }
   }
-  return { name: '', email: '', nim: '', phone: '', study_program: '', password: generatePassword(), is_active: true }
+  return { name: '', email: '', nim: '', phone: '', study_program: '', max_weekly_hours: '', password: generatePassword(), is_active: true }
 }
 
 /**
@@ -50,6 +51,7 @@ export default function StaffFormModal({ staff, onClose, onSaved }) {
       nim: form.nim.trim(),
       phone: form.phone.trim() || null,
       study_program: form.study_program.trim(),
+      max_weekly_hours: form.max_weekly_hours === '' ? null : Number(form.max_weekly_hours),
       is_active: form.is_active,
     }
     if (!isEdit) payload.password = form.password
@@ -126,6 +128,19 @@ export default function StaffFormModal({ staff, onClose, onSaved }) {
             <option key={program} value={program} />
           ))}
         </datalist>
+
+        <Input
+          label="Batas jam kerja per minggu"
+          type="number"
+          min={1}
+          max={60}
+          className="sm:col-span-2"
+          placeholder="Ikuti batas umum"
+          value={form.max_weekly_hours}
+          onChange={update('max_weekly_hours')}
+          error={errors.max_weekly_hours}
+          hint="Dalam jam. Kosongkan untuk mengikuti batas umum di Pengaturan. Staff yang mencapai batas dilewati algoritma jadwal."
+        />
 
         {!isEdit && (
           <Input

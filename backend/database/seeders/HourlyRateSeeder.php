@@ -8,9 +8,9 @@ use Illuminate\Database\Seeder;
 class HourlyRateSeeder extends Seeder
 {
     /**
-     * Dua versi tarif per slot jam (08.00–17.00) untuk menunjukkan riwayat tarif:
+     * Dua versi tarif per slot jam (06.00–20.00, mencakup seluruh jam shift) untuk menunjukkan riwayat tarif:
      *  - berlaku 1 Jan 2026 : semua jam Rp10.000
-     *  - berlaku 1 Agu 2026 : 08.00–16.00 Rp11.000, 16.00–17.00 Rp13.500 (jam sore lebih tinggi)
+     *  - berlaku 1 Agu 2026 : 06.00–16.00 Rp11.000, 16.00–20.00 Rp13.500 (jam sore lebih tinggi)
      * Penggajian periode sebelum Agustus 2026 otomatis memakai versi pertama.
      */
     public function run(): void
@@ -21,7 +21,7 @@ class HourlyRateSeeder extends Seeder
         ];
 
         foreach ($versions as $effectiveDate => $rateForHour) {
-            for ($hour = 8; $hour < 17; $hour++) {
+            for ($hour = 6; $hour < 20; $hour++) {
                 HourlyRate::query()->firstOrCreate(
                     [
                         'effective_date' => $effectiveDate,

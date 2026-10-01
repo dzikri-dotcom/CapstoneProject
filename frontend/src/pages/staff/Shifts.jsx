@@ -103,6 +103,15 @@ export default function Shifts() {
                         </p>
                         <p className="text-xs text-slate-500">
                           {formatDate(shift.date)} · {formatDuration(shift.duration_minutes)}
+                          {shift.post_name && (
+                            <>
+                              {' · '}
+                              <span className="font-medium text-slate-700">
+                                {shift.post_name}
+                                {shift.post_location && `, ${shift.post_location}`}
+                              </span>
+                            </>
+                          )}
                         </p>
                         <p className="mt-1.5 flex items-center gap-1.5 text-xs text-slate-600">
                           <Users className="size-3.5 text-slate-400" />

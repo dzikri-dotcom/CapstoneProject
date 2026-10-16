@@ -2,7 +2,7 @@
 
 Aplikasi web penjadwalan shift, presensi, dan penggajian student staff Unit Logistik Telkom University Surabaya, pengganti pengelolaan manual di Microsoft Excel.
 
-> Tugas akhir: *Penjadwalan Shift Otomatis Menggunakan Algoritma Round Robin untuk Mengatasi Inefisiensi Pengelolaan Manual Microsoft Excel pada Presensi dan Penggajian Student Staff Logistik Telkom University Surabaya.*
+> Capstone Project: *Penjadwalan Shift Otomatis Menggunakan Algoritma Round Robin untuk Mengatasi Inefisiensi Pengelolaan Manual Microsoft Excel pada Presensi dan Penggajian Student Staff Logistik Telkom University Surabaya.*
 
 ## Fitur
 

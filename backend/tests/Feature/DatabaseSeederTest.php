@@ -13,6 +13,7 @@ use App\Models\Setting;
 use App\Models\Shift;
 use App\Models\StaffProfile;
 use App\Models\User;
+use Database\Seeders\ScenarioStaffSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -31,14 +32,19 @@ class DatabaseSeederTest extends TestCase
         $this->seed();
     }
 
-    public function test_admin_dan_sepuluh_staff_aktif_dibuat(): void
+    public function test_admin_dan_lima_belas_staff_aktif_dibuat(): void
     {
         $admin = User::where('email', 'admin@logistik.test')->firstOrFail();
 
         $this->assertSame(UserRole::Admin, $admin->role);
         $this->assertNull($admin->staffProfile);
-        $this->assertSame(10, StaffProfile::active()->count());
-        $this->assertSame(10, User::where('role', UserRole::Staff)->count());
+        $this->assertSame(15, StaffProfile::active()->count());
+        $this->assertSame(15, User::where('role', UserRole::Staff)->count());
+        $this->assertSame(
+            ['Bintang', 'Dziyan', 'Taufiq', 'Hanny', 'Fitria', 'Raya', 'Khosyi', 'Annisa', 'Ruby', 'Dian', 'Salsa', 'Faizah', 'Baiti', 'Safira', 'Dimas'],
+            User::where('role', UserRole::Staff)->orderBy('id')->pluck('name')->all(),
+        );
+        $this->assertTrue(User::where('email', 'bintang@logistik.test')->exists());
     }
 
     public function test_pengaturan_bawaan_tersedia(): void
@@ -88,15 +94,20 @@ class DatabaseSeederTest extends TestCase
         $juli = HourlyRate::effectiveOn('2026-07-15')->pluck('rate', 'start_time');
         $september = HourlyRate::effectiveOn('2026-09-24')->pluck('rate', 'start_time');
 
-        $this->assertCount(14, $juli); // 06.00–20.00, mencakup seluruh jam shift
-        $this->assertSame(['06:00:00', '19:00:00'], [$juli->keys()->first(), $juli->keys()->last()]);
-        $this->assertSame(10000, $juli['16:00:00']);
-        $this->assertSame(11000, $september['08:00:00']);
-        $this->assertSame(13500, $september['16:00:00']);
+        $this->assertCount(13, $juli); // mengikuti jam operasional 06.30–19.30
+        $this->assertSame(['06:30:00', '18:30:00'], [$juli->keys()->first(), $juli->keys()->last()]);
+        $this->assertSame(10000, $juli['16:30:00']);
+        $this->assertSame(11000, $september['08:30:00']);
+        $this->assertSame(11000, $september['15:30:00']);
+        $this->assertSame(13500, $september['16:30:00']);
     }
 
     public function test_skenario_bentrok_rabu_pagi_hanya_satu_staff_kosong(): void
     {
+        // Skenario ini milik data uji algoritma (bukan data aplikasi).
+        StaffProfile::query()->each(fn (StaffProfile $staff) => $staff->user->delete());
+        $this->seed(ScenarioStaffSeeder::class);
+
         $busy = ClassSchedule::where('day_of_week', 3)
             ->where('start_time', '<', '10:00')
             ->where('end_time', '>', '08:00')
@@ -110,9 +121,9 @@ class DatabaseSeederTest extends TestCase
     {
         $this->seed();
 
-        $this->assertSame(11, User::count());
-        $this->assertSame(50, ClassSchedule::count());
-        $this->assertSame(28, HourlyRate::count());
+        $this->assertSame(16, User::count());
+        $this->assertSame(30, ClassSchedule::count());
+        $this->assertSame(26, HourlyRate::count());
         $this->assertSame([5, 3], [Shift::count(), Post::count()]);
     }
 

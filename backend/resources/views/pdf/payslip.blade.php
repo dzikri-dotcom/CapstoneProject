@@ -7,8 +7,9 @@
         @page { margin: 28px 34px; }
         body { font-family: 'DejaVu Sans', sans-serif; font-size: 9.5px; color: #1e293b; }
         table { width: 100%; border-collapse: collapse; }
-        .header { border-bottom: 3px solid #c8252c; padding-bottom: 8px; margin-bottom: 14px; }
-        .brand { font-size: 15px; font-weight: bold; color: #c8252c; }
+        .header { border-bottom: 2px solid #1c1917; padding-bottom: 8px; margin-bottom: 14px; }
+        .logo { width: 34px; padding-right: 8px; vertical-align: middle; }
+        .brand { font-size: 12px; font-weight: bold; letter-spacing: 0.5px; color: #1c1917; }
         .muted { color: #64748b; }
         .title { font-size: 13px; font-weight: bold; margin: 0 0 2px; }
         .right { text-align: right; }
@@ -36,8 +37,11 @@
 <div class="header">
     <table>
         <tr>
+            <td class="logo">
+                <img src="data:image/svg+xml;base64,{{ base64_encode(file_get_contents(resource_path('images/brand-mark.svg'))) }}" width="32" height="34" alt="">
+            </td>
             <td>
-                <div class="brand">Unit Logistik</div>
+                <div class="brand">LOGISTIK ASSET MANAGEMENT</div>
                 <div class="muted">Telkom University Surabaya</div>
             </td>
             <td class="right">
@@ -97,7 +101,7 @@
     <tr><td class="muted">Shift hadir</td><td class="right">{{ $detail->total_shifts }} shift</td></tr>
     <tr><td class="muted">Tidak hadir</td><td class="right">{{ $absentCount }} shift</td></tr>
     <tr><td class="muted">Total jam dibayar</td><td class="right">{{ $paidDuration }}</td></tr>
-    <tr><td class="muted">Pembulatan</td><td class="right">{{ $roundingLabel }}</td></tr>
+    <tr><td class="muted">Aturan gaji</td><td class="right">{{ $roundingLabel }}</td></tr>
     <tr class="total"><td>Total gaji</td><td class="right">Rp{{ number_format((float) $detail->total_amount, 0, ',', '.') }}</td></tr>
 </table>
 <div class="terbilang">Terbilang: {{ $terbilang }}</div>
@@ -110,7 +114,7 @@
 </div>
 
 <div class="footer">
-    Dokumen dibuat otomatis oleh Sistem Presensi Logistik pada {{ $issuedAt->translatedFormat('j F Y H:i') }} WIB.
+    Dokumen dibuat otomatis oleh Sistem Presensi Logistik Asset Management pada {{ $issuedAt->translatedFormat('j F Y H:i') }} WIB.
     Gaji dihitung dari jam hadir aktual di dalam jam shift × tarif slot jam yang berlaku pada tanggal shift.
 </div>
 </body>

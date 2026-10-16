@@ -18,8 +18,9 @@ use Illuminate\Validation\ValidationException;
 class HourlyRateService
 {
     /**
-     * Daftar slot per jam yang perlu diberi tarif: dari jam buka paling awal
-     * sampai jam tutup paling akhir di antara hari operasional yang aktif.
+     * Daftar slot per jam yang perlu diberi tarif, mengikuti jam operasional di Pengaturan:
+     * dimulai TEPAT dari jam buka paling awal (misal 06.30 → 06.30–07.30, 07.30–08.30, …)
+     * sampai jam tutup paling akhir; slot terakhir dipendekkan bila tidak genap satu jam.
      *
      * @return array<int, array{start_time:string, end_time:string}>
      */
@@ -30,12 +31,12 @@ class HourlyRateService
             return [];
         }
 
-        $start = intdiv($hours->min(fn ($h) => Time::toMinutes($h->open_time)), 60) * 60;
-        $end = (int) ceil($hours->max(fn ($h) => Time::toMinutes($h->close_time)) / 60) * 60;
+        $start = $hours->min(fn ($h) => Time::toMinutes($h->open_time));
+        $end = $hours->max(fn ($h) => Time::toMinutes($h->close_time));
 
         $slots = [];
         for ($minute = $start; $minute < $end; $minute += 60) {
-            $slots[] = ['start_time' => Time::format($minute), 'end_time' => Time::format($minute + 60)];
+            $slots[] = ['start_time' => Time::format($minute), 'end_time' => Time::format(min($minute + 60, $end))];
         }
 
         return $slots;
@@ -46,12 +47,14 @@ class HourlyRateService
      */
     public function current(): array
     {
-        $rates = HourlyRate::effectiveOn(today()->toDateString())->get()
-            ->keyBy(fn (HourlyRate $rate) => substr($rate->start_time, 0, 5));
+        $rates = HourlyRate::effectiveOn(today()->toDateString())->get();
 
+        // Tarif tiap slot = tarif yang berlaku pada jam mulai slot. Versi lama dengan batas jam
+        // berbeda (misal 06.00–07.00) tetap terbaca setelah jam operasional diubah.
         $slots = array_map(fn (array $slot) => [
             ...$slot,
-            'rate' => $rates->get($slot['start_time'])?->rate,
+            'rate' => $rates->first(fn (HourlyRate $rate) => Time::toMinutes($rate->start_time) <= Time::toMinutes($slot['start_time'])
+                && Time::toMinutes($slot['start_time']) < Time::toMinutes($rate->end_time))?->rate,
         ], $this->hourSlots());
 
         return [

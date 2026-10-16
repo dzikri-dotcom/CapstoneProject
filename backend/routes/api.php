@@ -128,6 +128,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Presensi dengan QR
         Route::get('attendance/current', [StaffAttendanceController::class, 'current']);
+        Route::post('attendance/scan', [StaffAttendanceController::class, 'scan'])->middleware('throttle:20,1');
         Route::post('attendance/check-in', [StaffAttendanceController::class, 'checkIn'])->middleware('throttle:20,1');
         Route::post('attendance/check-out', [StaffAttendanceController::class, 'checkOut'])->middleware('throttle:20,1');
         Route::get('attendances', [StaffAttendanceController::class, 'history']);

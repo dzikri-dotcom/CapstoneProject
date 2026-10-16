@@ -17,6 +17,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -28,9 +29,21 @@ use Illuminate\Validation\ValidationException;
  *  - check-out paling lambat `checkout_grace_minutes` setelah shift berakhir;
  *  - shift yang berakhir tanpa check-in otomatis ditandai tidak hadir.
  * Hanya shift dari periode yang sudah dipublikasikan yang bisa dipresensi.
+ *
+ * Presensi berbasis SESI: setiap shift adalah satu sesi, dan staff hanya boleh punya satu sesi
+ * terbuka (sudah check-in, belum check-out). Satu kali scan QR menjalankan aksi yang sesuai (scan()):
+ *  - tidak ada sesi terbuka            → check-in ke shift yang jendela check-in-nya sedang buka;
+ *  - ada sesi terbuka                  → check-out sesi itu;
+ *  - ada sesi terbuka & shift berikutnya
+ *    (mis. shift berurutan) sudah bisa
+ *    di-check-in                       → PERGANTIAN SESI: check-out sesi lama lalu check-in sesi baru.
+ * Scan ulang dalam DOUBLE_SCAN_MINUTES setelah check-in diabaikan agar tidak langsung check-out.
  */
 class AttendanceService
 {
+    /** Scan ulang dalam rentang ini setelah check-in dianggap scan ganda, bukan check-out. */
+    public const DOUBLE_SCAN_MINUTES = 5;
+
     public const STATE_LABELS = [
         'upcoming' => 'Belum dimulai',
         'open' => 'Belum check-in',
@@ -148,8 +161,9 @@ class AttendanceService
         $now = now();
         $today = $this->assignmentsOn($staff, $now);
 
-        $checkIn = $today->first(fn (ShiftAssignment $a) => $this->canCheckIn($a, $now));
-        $checkOut = $today->first(fn (ShiftAssignment $a) => $this->canCheckOut($a, $now));
+        $action = $this->nextAction($today, $now);
+        $checkIn = $action['check_in'];
+        $checkOut = $action['check_out'];
         $next = $this->publishedAssignments()
             ->where('staff_profile_id', $staff->id)
             ->whereHas('shiftSlot', fn (Builder $slot) => $slot->where(fn (Builder $q) => $q
@@ -162,6 +176,8 @@ class AttendanceService
 
         return [
             'server_time' => $now->toIso8601String(),
+            // Aksi yang dijalankan bila staff scan QR sekarang: check_in | check_out | handover | null.
+            'next_action' => $action['type'],
             'check_in' => $checkIn ? $this->describe($checkIn, $now) : null,
             'check_out' => $checkOut ? $this->describe($checkOut, $now) : null,
             'today' => $today->map(fn (ShiftAssignment $a) => $this->describe($a, $now))->values()->all(),
@@ -181,17 +197,133 @@ class AttendanceService
         $now = now();
         $today = $this->assignmentsOn($staff, $now);
 
+        $open = $this->openSession($today, $now);
+        if ($open) {
+            $this->fail(sprintf('Anda masih bertugas di shift %s. Lakukan check-out terlebih dahulu.', $this->timeRange($open)));
+        }
+
         $assignment = $today->first(fn (ShiftAssignment $a) => $this->canCheckIn($a, $now));
         if (! $assignment) {
             $this->fail($this->checkInUnavailableReason($today, $now));
         }
 
+        return $this->startSession($assignment, $now);
+    }
+
+    /**
+     * Satu kali scan QR: check-in, check-out, atau pergantian sesi — ditentukan dari sesi staff saat ini.
+     *
+     * @return array{action:string, message:string, check_in:?Attendance, check_out:?Attendance}
+     */
+    public function scan(StaffProfile $staff, ?string $token): array
+    {
+        $this->qrTokens->assertValid($token);
+        $now = now();
+        $today = $this->assignmentsOn($staff, $now);
+        $action = $this->nextAction($today, $now);
+
+        // Scan ganda tepat setelah check-in tidak boleh langsung menutup sesi (check-out maupun pergantian sesi).
+        if ($action['check_out']) {
+            $this->guardDoubleScan($action['check_out'], $now);
+        }
+
+        return match ($action['type']) {
+            'check_in' => $this->scanCheckIn($action['check_in'], $now),
+            'check_out' => $this->scanCheckOut($action['check_out'], $now),
+            'handover' => DB::transaction(function () use ($action, $now) {
+                $closed = $this->endSession($action['check_out'], $now);
+                $opened = $this->startSession($action['check_in'], $now);
+
+                return [
+                    'action' => 'handover',
+                    'message' => sprintf(
+                        'Pergantian sesi: check-out %s dan check-in %s pukul %s — %s.',
+                        $this->sessionLabel($action['check_out']),
+                        $this->sessionLabel($action['check_in']),
+                        $now->format('H:i'),
+                        $opened->status->label(),
+                    ),
+                    'check_in' => $opened,
+                    'check_out' => $closed,
+                ];
+            }),
+            default => $this->fail($this->checkInUnavailableReason($today, $now)),
+        };
+    }
+
+    private function scanCheckIn(ShiftAssignment $assignment, Carbon $now): array
+    {
+        $record = $this->startSession($assignment, $now);
+
+        return [
+            'action' => 'check_in',
+            'message' => sprintf('Check-in %s berhasil pukul %s — %s.', $this->sessionLabel($assignment), $now->format('H:i'), $record->status->label()),
+            'check_in' => $record,
+            'check_out' => null,
+        ];
+    }
+
+    private function guardDoubleScan(ShiftAssignment $open, Carbon $now): void
+    {
+        $checkedInAt = $open->attendance->check_in_at;
+        if ($checkedInAt->diffInMinutes($now) < self::DOUBLE_SCAN_MINUTES) {
+            $this->fail(sprintf(
+                'Anda sudah check-in pukul %s untuk %s. Scan lagi saat selesai bertugas untuk check-out.',
+                $checkedInAt->format('H:i'),
+                $this->sessionLabel($open),
+            ));
+        }
+    }
+
+    private function scanCheckOut(ShiftAssignment $assignment, Carbon $now): array
+    {
+        $record = $this->endSession($assignment, $now);
+
+        return [
+            'action' => 'check_out',
+            'message' => sprintf('Check-out %s berhasil pukul %s. Terima kasih!', $this->sessionLabel($assignment), $now->format('H:i')),
+            'check_in' => null,
+            'check_out' => $record,
+        ];
+    }
+
+    /**
+     * Aksi untuk scan berikutnya berdasarkan sesi:
+     * check_out = sesi yang sedang terbuka, check_in = sesi lain yang jendela check-in-nya sedang buka.
+     *
+     * @return array{type:?string, check_in:?ShiftAssignment, check_out:?ShiftAssignment}
+     */
+    private function nextAction(Collection $today, Carbon $now): array
+    {
+        $open = $this->openSession($today, $now);
+        $next = $today->first(fn (ShiftAssignment $a) => $a->id !== $open?->id && $this->canCheckIn($a, $now));
+
+        return [
+            'type' => match (true) {
+                $open && $next => 'handover',
+                (bool) $open => 'check_out',
+                (bool) $next => 'check_in',
+                default => null,
+            },
+            'check_in' => $next,
+            'check_out' => $open,
+        ];
+    }
+
+    /** Sesi terbuka: sudah check-in, belum check-out, dan batas check-out belum lewat. */
+    private function openSession(Collection $today, Carbon $now): ?ShiftAssignment
+    {
+        return $today->first(fn (ShiftAssignment $a) => $this->canCheckOut($a, $now));
+    }
+
+    private function startSession(ShiftAssignment $assignment, Carbon $now): Attendance
+    {
         $window = $this->window($assignment);
 
         try {
-            return Attendance::query()->create([
+            $record = Attendance::query()->create([
                 'shift_assignment_id' => $assignment->id,
-                'staff_profile_id' => $staff->id,
+                'staff_profile_id' => $assignment->staff_profile_id,
                 'check_in_at' => $now,
                 'check_in_method' => AttendanceMethod::Qr,
                 'status' => $now->gt($window['late_after']) ? AttendanceStatus::Late : AttendanceStatus::OnTime,
@@ -200,6 +332,31 @@ class AttendanceService
             // Dua permintaan check-in bersamaan (misal tombol ditekan dua kali).
             $this->fail('Anda sudah check-in untuk shift ini.');
         }
+
+        $assignment->setRelation('attendance', $record);
+
+        return $record;
+    }
+
+    private function endSession(ShiftAssignment $assignment, Carbon $now): Attendance
+    {
+        $assignment->attendance->update([
+            'check_out_at' => $now,
+            'check_out_method' => AttendanceMethod::Qr,
+        ]);
+
+        return $assignment->attendance;
+    }
+
+    /** "Shift 1 (06:30–09:30, Pos 1)" atau "shift 08:00–10:00" untuk jadwal lama tanpa nama shift. */
+    private function sessionLabel(ShiftAssignment $assignment): string
+    {
+        $slot = $assignment->shiftSlot;
+        if (! $slot->shift_name) {
+            return 'shift '.$this->timeRange($assignment);
+        }
+
+        return sprintf('%s (%s%s)', $slot->shift_name, $this->timeRange($assignment), $slot->post_name ? ", {$slot->post_name}" : '');
     }
 
     public function checkOut(StaffProfile $staff, ?string $token): Attendance
@@ -212,12 +369,7 @@ class AttendanceService
             $this->fail('Tidak ada shift yang perlu di-check-out. Pastikan Anda sudah check-in dan batas waktu check-out belum lewat.');
         }
 
-        $assignment->attendance->update([
-            'check_out_at' => $now,
-            'check_out_method' => AttendanceMethod::Qr,
-        ]);
-
-        return $assignment->attendance;
+        return $this->endSession($assignment, $now);
     }
 
     private function canCheckIn(ShiftAssignment $assignment, Carbon $now): bool

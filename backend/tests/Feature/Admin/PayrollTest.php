@@ -13,11 +13,11 @@ use App\Models\Setting;
 use App\Models\StaffProfile;
 use App\Models\User;
 use Carbon\Carbon;
-use Database\Seeders\HourlyRateSeeder;
 use Database\Seeders\OperationalHourSeeder;
 use Database\Seeders\SettingSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Tests\Support\LegacyHourlyRateSeeder;
 use Tests\TestCase;
 
 /**
@@ -42,7 +42,7 @@ class PayrollTest extends TestCase
         parent::setUp();
 
         $this->travelTo('2026-10-05 09:00:00');
-        $this->seed([SettingSeeder::class, OperationalHourSeeder::class, HourlyRateSeeder::class]);
+        $this->seed([SettingSeeder::class, OperationalHourSeeder::class, LegacyHourlyRateSeeder::class]);
         Setting::where('key', 'salary_deduction_enabled')->update(['value' => '1']);
 
         $this->admin = User::factory()->admin()->create();

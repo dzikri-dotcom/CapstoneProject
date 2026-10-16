@@ -31,10 +31,9 @@ class DemoDataSeederTest extends TestCase
         $this->seed(DemoDataSeeder::class);
     }
 
-    public function test_membuat_staff_tambahan(): void
+    public function test_tidak_menambah_staff_dan_memakai_staff_unit(): void
     {
-        $this->assertSame(24, StaffProfile::active()->count()); // 10 staff seeder + 14 staff demo
-        $this->assertNull(StaffProfile::whereHas('user', fn ($q) => $q->where('email', 'ahmad.fauzi@logistik.test'))->value('max_weekly_hours'));
+        $this->assertSame(15, StaffProfile::active()->count());
     }
 
     public function test_membuat_jadwal_minggu_lalu_minggu_ini_dan_minggu_depan(): void

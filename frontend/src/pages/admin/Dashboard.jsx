@@ -1,19 +1,50 @@
-import { AlertTriangle, ArrowRight, CalendarClock, CalendarRange, QrCode, UserCheck, Users, Wallet } from 'lucide-react'
+import { ArrowRight, CalendarClock, CalendarRange, QrCode, Wallet } from 'lucide-react'
 import { Link } from 'react-router'
-import AttendanceBadges from '@/components/attendance/AttendanceBadges'
 import { CHART } from '@/components/charts/chartTheme'
+import TodayBoard from '@/components/dashboard/TodayBoard'
 import Alert from '@/components/ui/Alert'
-import Avatar from '@/components/ui/Avatar'
 import Card from '@/components/ui/Card'
 import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
-import StatCard from '@/components/ui/StatCard'
 import useAuth from '@/hooks/useAuth'
 import useFetch from '@/hooks/useFetch'
 import useNow from '@/hooks/useNow'
 import { getErrorMessage } from '@/services/api'
 import { getAdminDashboard } from '@/services/reportService'
+import cn from '@/utils/cn'
 import { firstName, formatDateRange, formatLongDate, formatShortDate } from '@/utils/format'
+
+/** Ringkasan angka dalam satu baris, dipisah garis tipis (bukan empat kartu besar). */
+function MetricStrip({ items }) {
+  return (
+    <dl className="grid grid-cols-2 overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-card lg:grid-cols-4">
+      {items.map((item, index) => (
+        <div
+          key={item.label}
+          className={cn(
+            'px-5 py-4',
+            index % 2 === 1 && 'border-l border-slate-100',
+            index >= 2 && 'border-t border-slate-100 lg:border-t-0',
+            index === 2 && 'lg:border-l',
+          )}
+        >
+          <dt className="text-[13px] text-slate-500">{item.label}</dt>
+          <dd className="mt-1 flex items-baseline gap-2">
+            <span
+              className={cn(
+                'text-2xl font-semibold tracking-tight tabular-nums',
+                item.warn ? 'text-amber-700' : item.accent ? 'text-brand-700' : 'text-slate-900',
+              )}
+            >
+              {item.value}
+            </span>
+            {item.hint && <span className="text-xs text-slate-400">{item.hint}</span>}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  )
+}
 
 function CardLink({ to, children }) {
   return (
@@ -114,16 +145,16 @@ function Hero({ name, data }) {
 export default function Dashboard() {
   const { user } = useAuth()
   const { data, loading, error } = useFetch(getAdminDashboard)
+  const now = useNow(30000) // menandai shift yang sedang berjalan di papan tugas
 
   if (!data) {
     return (
       <>
         <Hero name={user.name} />
         {loading ? (
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-            {[1, 2, 3, 4].map((key) => (
-              <Skeleton key={key} className="h-[106px] rounded-xl" />
-            ))}
+          <div className="space-y-6">
+            <Skeleton className="h-[84px] rounded-xl" />
+            <Skeleton className="h-80 rounded-xl" />
           </div>
         ) : (
           <Alert variant="error">{getErrorMessage(error)}</Alert>
@@ -136,58 +167,24 @@ export default function Dashboard() {
     <>
       <Hero name={user.name} data={data} />
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-        <StatCard icon={Users} label="Staff aktif" value={data.active_staff} tone="blue" />
-        <StatCard icon={CalendarClock} label="Shift hari ini" value={data.today_shift_count} hint="slot yang dipublikasikan" tone="violet" />
-        <StatCard icon={UserCheck} label="Sedang bertugas" value={data.on_duty.length} tone="green" />
-        <StatCard icon={AlertTriangle} label="Slot kurang staff" value={data.understaffed.length} hint="14 hari ke depan" tone={data.understaffed.length ? 'amber' : 'gray'} />
-      </div>
+      <MetricStrip
+        items={[
+          { label: 'Staff aktif', value: data.active_staff },
+          { label: 'Shift hari ini', value: data.today_shift_count },
+          { label: 'Sedang bertugas', value: data.on_duty.length, accent: data.on_duty.length > 0 },
+          { label: 'Slot kurang staff', value: data.understaffed.length, hint: '14 hari ke depan', warn: data.understaffed.length > 0 },
+        ]}
+      />
 
       <div className="mt-6 grid gap-6 xl:grid-cols-3">
-        <div className="space-y-6 xl:col-span-2">
-          <Card title="Sedang bertugas" actions={<CardLink to="/admin/presensi">Monitoring</CardLink>}>
-            {data.on_duty.length ? (
-              <ul className="grid gap-3 sm:grid-cols-2">
-                {data.on_duty.map((staff) => (
-                  <li key={staff.name} className="flex items-center gap-3 rounded-lg border border-slate-200 p-3">
-                    <Avatar name={staff.name} size="sm" />
-                    <div className="min-w-0">
-                      <p className="truncate font-medium text-slate-900">{staff.name}</p>
-                      <p className="text-xs text-slate-500 tabular-nums">
-                        Shift {staff.shift} · masuk {staff.check_in_time}
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-slate-500">Tidak ada staff yang sedang check-in saat ini.</p>
-            )}
-          </Card>
-
-          <Card title="Shift hari ini" bodyClassName="p-0">
+        <div className="xl:col-span-2">
+          <Card
+            title="Papan tugas hari ini"
+            description="Siapa berjaga di pos mana, beserta status presensinya."
+            actions={<CardLink to="/admin/presensi">Monitoring</CardLink>}
+          >
             {data.today_slots.length ? (
-              <ul className="divide-y divide-slate-100">
-                {data.today_slots.map((slot) => (
-                  <li key={slot.id} className="flex flex-col gap-2 px-5 py-3 sm:flex-row sm:items-start">
-                    <p className="w-32 shrink-0 pt-0.5 font-medium text-slate-700 tabular-nums">
-                      {slot.start_time}–{slot.end_time}
-                      {slot.post_name && <span className="block text-xs font-normal text-slate-500">{slot.post_name}</span>}
-                    </p>
-                    <ul className="flex-1 space-y-1.5">
-                      {slot.staff.map((item) => (
-                        <li key={item.assignment_id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                          <span className="text-slate-800">{item.staff?.name}</span>
-                          <AttendanceBadges item={item} />
-                        </li>
-                      ))}
-                      {slot.staff.length < slot.required_staff && (
-                        <li className="text-xs font-medium text-red-600">Kurang {slot.required_staff - slot.staff.length} staff</li>
-                      )}
-                    </ul>
-                  </li>
-                ))}
-              </ul>
+              <TodayBoard slots={data.today_slots} now={now} />
             ) : (
               <EmptyState icon={CalendarClock} title="Tidak ada shift hari ini" description="Belum ada jadwal dipublikasikan untuk hari ini." />
             )}

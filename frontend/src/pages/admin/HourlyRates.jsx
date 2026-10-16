@@ -22,7 +22,7 @@ export default function HourlyRates() {
     <>
       <PageHeader
         title="Tarif per Jam"
-        description="Tarif dibayar per slot jam. Setiap perubahan disimpan sebagai versi baru dengan tanggal berlaku, sehingga gaji periode lama tetap memakai tarif lamanya."
+        description="Tarif dibayar per slot jam yang mengikuti jam operasional di Pengaturan (mulai dari jam buka, tiap 1 jam). Setiap perubahan disimpan sebagai versi baru dengan tanggal berlaku, sehingga gaji periode lama tetap memakai tarif lamanya."
       />
 
       {currentQuery.error && !current && (

@@ -1,5 +1,5 @@
-import { CalendarClock, CheckCircle2, History, LogIn, LogOut, ScanLine } from 'lucide-react'
-import { lazy, Suspense, useState } from 'react'
+import { CalendarClock, History, LogIn, LogOut, Repeat, ScanLine } from 'lucide-react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import AttendanceBadges from '@/components/attendance/AttendanceBadges'
 import Alert from '@/components/ui/Alert'
@@ -11,7 +11,7 @@ import Spinner from '@/components/ui/Spinner'
 import useFetch from '@/hooks/useFetch'
 import useToast from '@/hooks/useToast'
 import { getErrorMessage } from '@/services/api'
-import { checkIn, checkOut, getMyAttendanceStatus } from '@/services/attendanceService'
+import { getMyAttendanceStatus, scanAttendance } from '@/services/attendanceService'
 import { formatShortDate } from '@/utils/format'
 
 // Library pemindai cukup besar, jadi baru diunduh saat tombol "Scan QR Code" ditekan.
@@ -56,39 +56,53 @@ function ShiftSummary({ item, children }) {
   )
 }
 
+/** Keterangan aksi yang akan dijalankan saat staff scan QR sekarang. */
+const ACTION_HINT = {
+  check_in: { icon: LogIn, label: 'Scan untuk check-in' },
+  check_out: { icon: LogOut, label: 'Scan untuk check-out' },
+  handover: { icon: Repeat, label: 'Scan untuk pergantian sesi' },
+}
+
 export default function Attendance() {
   const toast = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [scannedToken, setScannedToken] = useState(null)
   const [scanning, setScanning] = useState(false)
-  const [submitting, setSubmitting] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
   const [actionError, setActionError] = useState(null)
   const [version, setVersion] = useState(0)
-  const { data: status, loading, error } = useFetch(getMyAttendanceStatus, [version])
+  const [fresh, setFresh] = useState(null) // status terbaru dari respons scan
+  const { data: fetched, loading, error } = useFetch(getMyAttendanceStatus, [version])
+  const status = fresh ?? fetched
+  const linkToken = searchParams.get('t')
+  const handledLink = useRef(null)
 
-  // Token dari link QR (dipindai dengan kamera bawaan HP) atau dari pemindai di aplikasi.
-  const token = scannedToken ?? searchParams.get('t')
+  const submit = useCallback(
+    async (token) => {
+      setSubmitting(true)
+      setActionError(null)
+      try {
+        // Server yang menentukan aksinya berdasarkan sesi: check-in, check-out, atau pergantian sesi.
+        const result = await scanAttendance(token)
+        toast.success(result.message)
+        setFresh(result.data)
+      } catch (err) {
+        setActionError(getErrorMessage(err))
+        setFresh(null)
+        setVersion((value) => value + 1)
+      } finally {
+        setSubmitting(false)
+      }
+    },
+    [toast],
+  )
 
-  function clearToken() {
-    setScannedToken(null)
-    if (searchParams.get('t')) setSearchParams({}, { replace: true })
-  }
-
-  async function submit(kind, tokenValue = token) {
-    setSubmitting(kind)
-    setActionError(null)
-    try {
-      const result = kind === 'in' ? await checkIn(tokenValue) : await checkOut(tokenValue)
-      toast.success(result.message)
-      clearToken()
-      setVersion((value) => value + 1)
-    } catch (err) {
-      setActionError(getErrorMessage(err))
-      if (err.response?.data?.errors?.token) clearToken()
-    } finally {
-      setSubmitting(null)
-    }
-  }
+  // QR dipindai dengan kamera bawaan HP membuka link ?t=TOKEN → langsung diproses sekali (QR hanya berlaku sebentar).
+  useEffect(() => {
+    if (!linkToken || handledLink.current === linkToken) return
+    handledLink.current = linkToken
+    setSearchParams({}, { replace: true })
+    submit(linkToken)
+  }, [linkToken, setSearchParams, submit])
 
   function handleScan(text) {
     setScanning(false)
@@ -97,13 +111,7 @@ export default function Attendance() {
       setActionError('QR tidak dikenali. Pastikan Anda memindai QR presensi di ruang logistik.')
       return
     }
-    // Jika hanya satu aksi yang mungkin, langsung jalankan.
-    if (status?.check_in && !status?.check_out) submit('in', value)
-    else if (status?.check_out && !status?.check_in) submit('out', value)
-    else {
-      setActionError(null)
-      setScannedToken(value)
-    }
+    submit(value)
   }
 
   if (!status) {
@@ -121,57 +129,22 @@ export default function Attendance() {
   }
 
   const hasAction = Boolean(status.check_in || status.check_out)
+  const hint = ACTION_HINT[status.next_action]
 
   return (
     <div className="space-y-5">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Presensi</h1>
-        <p className="mt-1 text-sm text-slate-500">Scan QR Code di layar ruang logistik untuk check-in dan check-out.</p>
+        <p className="mt-1 text-sm text-slate-500">
+          Cukup scan QR Code di layar ruang logistik — sistem otomatis menentukan check-in, check-out, atau pergantian sesi
+          sesuai shift Anda.
+        </p>
       </div>
 
       {actionError && (
         <Alert variant="error" title="Presensi belum berhasil">
           {actionError}
         </Alert>
-      )}
-
-      {token && (
-        <Card className="border-emerald-200 bg-emerald-50/50">
-          <div className="flex items-start gap-3">
-            <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-600" />
-            <div className="flex-1 space-y-3">
-              <div>
-                <p className="font-medium text-emerald-900">Kode QR terbaca</p>
-                <p className="text-sm text-emerald-800">Kode hanya berlaku sebentar — segera konfirmasi.</p>
-              </div>
-              {hasAction ? (
-                <div className="flex flex-col gap-2">
-                  {status.check_in && (
-                    <Button icon={LogIn} loading={submitting === 'in'} disabled={Boolean(submitting)} onClick={() => submit('in')}>
-                      Check-in shift {status.check_in.start_time}–{status.check_in.end_time}
-                    </Button>
-                  )}
-                  {status.check_out && (
-                    <Button
-                      variant={status.check_in ? 'secondary' : 'primary'}
-                      icon={LogOut}
-                      loading={submitting === 'out'}
-                      disabled={Boolean(submitting)}
-                      onClick={() => submit('out')}
-                    >
-                      Check-out shift {status.check_out.start_time}–{status.check_out.end_time}
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                <p className="text-sm text-slate-600">Tidak ada shift yang bisa di-check-in atau di-check-out saat ini.</p>
-              )}
-              <button type="button" onClick={clearToken} className="text-sm text-slate-500 underline">
-                Batal
-              </button>
-            </div>
-          </div>
-        </Card>
       )}
 
       {status.check_out && (
@@ -181,6 +154,8 @@ export default function Attendance() {
             <p className="mt-2 text-sm text-slate-600">
               Check-in pukul <strong>{status.check_out.attendance.check_in_time}</strong>. Scan QR untuk check-out paling
               lambat pukul <strong>{status.check_out.check_out_closes}</strong>.
+              {status.next_action === 'handover' &&
+                ' Shift berikutnya sudah bisa dimulai — satu kali scan akan menutup sesi ini dan membuka sesi berikutnya.'}
             </p>
           </ShiftSummary>
         </Card>
@@ -212,16 +187,19 @@ export default function Attendance() {
         </Card>
       )}
 
-      {!token && (
-        <div className="space-y-2">
-          <Button icon={ScanLine} className="w-full py-3.5 text-base" onClick={() => setScanning(true)}>
-            Scan QR Code
-          </Button>
-          <p className="text-center text-xs text-slate-500">
-            Bisa juga memakai aplikasi kamera HP — link presensi akan terbuka otomatis.
-          </p>
-        </div>
-      )}
+      <div className="space-y-2">
+        <Button
+          icon={hint?.icon ?? ScanLine}
+          loading={submitting}
+          className="h-12 w-full text-base"
+          onClick={() => setScanning(true)}
+        >
+          {submitting ? 'Memproses presensi…' : (hint?.label ?? 'Scan QR Code')}
+        </Button>
+        <p className="text-center text-xs text-slate-500">
+          Bisa juga memakai aplikasi kamera HP — presensi langsung diproses saat link terbuka.
+        </p>
+      </div>
 
       {status.today.length > 0 && (
         <Card title="Shift hari ini" bodyClassName="p-0">

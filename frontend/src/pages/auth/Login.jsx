@@ -17,21 +17,21 @@ const features = [
 // Ilustrasi pratinjau jadwal: giliran staff berputar dari slot ke slot.
 const PREVIEW_DAYS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum']
 const PREVIEW_ROWS = [
-  ['08.00', ['AP', 'NA'], ['BS', 'DA'], ['FN', 'MR'], ['PA', 'RK'], ['SP', 'AR']],
-  ['10.00', ['BS', 'DA'], ['FN', 'MR'], ['PA', 'RK'], ['SP', 'AR'], ['AP', 'NA']],
-  ['13.00', ['FN', 'MR'], ['PA', null], ['SP', 'AR'], ['AP', 'NA'], ['BS', 'DA']],
+  ['06.30', ['BI', 'DZ'], ['TA', 'HA'], ['FI', 'RA'], ['KH', 'AN'], ['RU', 'DI']],
+  ['09.30', ['TA', 'HA'], ['FI', 'RA'], ['KH', 'AN'], ['RU', 'DI'], ['BI', 'DZ']],
+  ['11.30', ['FI', 'RA'], ['KH', null], ['RU', 'DI'], ['BI', 'DZ'], ['TA', 'HA']],
 ]
 const CHIP_TONES = {
-  AP: 'bg-rose-100 text-rose-700',
-  NA: 'bg-sky-100 text-sky-700',
-  BS: 'bg-amber-100 text-amber-800',
-  DA: 'bg-emerald-100 text-emerald-700',
-  FN: 'bg-indigo-100 text-indigo-700',
-  MR: 'bg-teal-100 text-teal-700',
-  PA: 'bg-orange-100 text-orange-700',
-  RK: 'bg-slate-200 text-slate-700',
-  SP: 'bg-rose-100 text-rose-700',
-  AR: 'bg-sky-100 text-sky-700',
+  BI: 'bg-rose-100 text-rose-700',
+  DZ: 'bg-sky-100 text-sky-700',
+  TA: 'bg-amber-100 text-amber-800',
+  HA: 'bg-emerald-100 text-emerald-700',
+  FI: 'bg-indigo-100 text-indigo-700',
+  RA: 'bg-teal-100 text-teal-700',
+  KH: 'bg-orange-100 text-orange-700',
+  AN: 'bg-slate-200 text-slate-700',
+  RU: 'bg-rose-100 text-rose-700',
+  DI: 'bg-sky-100 text-sky-700',
 }
 
 function SchedulePreview() {
@@ -78,7 +78,7 @@ function SchedulePreview() {
 // Akun hasil seeder, hanya ditampilkan saat mode pengembangan (npm run dev).
 const demoAccounts = [
   { label: 'Admin', email: 'admin@logistik.test' },
-  { label: 'Staff', email: 'andi.pratama@logistik.test' },
+  { label: 'Staff', email: 'bintang@logistik.test' },
 ]
 
 export default function Login() {

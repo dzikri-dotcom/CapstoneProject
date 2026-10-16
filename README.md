@@ -10,7 +10,7 @@ Aplikasi web penjadwalan shift, presensi, dan penggajian student staff Unit Logi
 |---|---|
 | Kelola data & akun staff | Isi jadwal kuliah, lihat jam kosong |
 | Pengaturan shift, pos jaga (maks. 2 orang per pos), jam operasional, batas jam mingguan (umum & per staff), toleransi & maksimal keterlambatan, aturan potongan gaji | Lihat jadwal shift yang dipublikasikan |
-| Tarif per slot jam dengan riwayat tanggal berlaku | Presensi dengan scan QR (check-in/check-out) |
+| Tarif per slot jam dengan riwayat tanggal berlaku | Presensi berbasis sesi: satu scan QR untuk check-in, check-out, atau pergantian sesi |
 | **Generate jadwal otomatis (Round Robin)**, edit manual, log algoritma, publish | Riwayat presensi |
 | Layar QR dinamis & monitoring/koreksi presensi | Rekap & slip gaji PDF |
 | Penggajian otomatis, finalisasi, ekspor Excel & slip PDF | Estimasi gaji bulan berjalan |
@@ -51,7 +51,7 @@ php artisan migrate --seed
 
 Isi `.env` bawaan sudah mengarah ke MySQL Laragon (`root` tanpa password, database `presensi_logistik`, zona waktu `Asia/Jakarta`, `FRONTEND_URL=http://localhost:5173`). Ubah bila berbeda.
 
-`migrate --seed` mengisi: 1 admin, 10 student staff dengan jadwal kuliah (sebagian sengaja bentrok), 5 shift sesuai SOP (06.30–09.30, 09.30–11.30, 11.30–14.30, 14.30–16.30, 16.30–19.30), 3 pos jaga (Pos 1 & 2 di Gedung A, Pos 3 di Gedung B; maksimal 2 orang per pos), jam operasional Senin–Jumat 06.30–19.30, dua versi tarif per jam (06.00–20.00), dan pengaturan bawaan (batas 40 jam per orang per minggu, tanpa potongan gaji). Setelah itu jadwal bisa langsung di-generate.
+`migrate --seed` mengisi: 1 admin, 15 student staff unit (Bintang, Dziyan, Taufiq, Hanny, Fitria, Raya, Khosyi, Annisa, Ruby, Dian, Salsa, Faizah, Baiti, Safira, Dimas — NIM, program studi, dan jadwal kuliahnya masih contoh), 5 shift sesuai SOP (06.30–09.30, 09.30–11.30, 11.30–14.30, 14.30–16.30, 16.30–19.30), 3 pos jaga (Pos 1 & 2 di Gedung A, Pos 3 di Gedung B; maksimal 2 orang per pos), jam operasional Senin–Jumat 06.30–19.30, dua versi tarif per jam (06.00–20.00), dan pengaturan bawaan (batas 40 jam per orang per minggu, tanpa potongan gaji). Setelah itu jadwal bisa langsung di-generate.
 
 **Opsional — data demo** agar semua fitur langsung terisi: 14 staff tambahan (sebagian dengan batas jam mingguan khusus), jadwal minggu lalu & minggu ini (dipublikasikan) serta minggu depan (draft), presensi simulasi termasuk staff yang sedang bertugas, dan periode gaji bulan berjalan. Aman dijalankan ulang.
 
@@ -95,15 +95,15 @@ php artisan schedule:work
 | Peran | Email | Password |
 |---|---|---|
 | Admin | `admin@logistik.test` | `password` |
-| Staff | `andi.pratama@logistik.test` (dan 9 staff lain, lihat menu Student Staff) | `password` |
+| Staff | `bintang@logistik.test` (format email: `<nama>@logistik.test`, 15 staff — lihat menu Student Staff) | `password` |
 
 Di mode pengembangan, halaman login menyediakan tombol **Isi akun Admin/Staff**.
 
 ## Mencoba alur utama
 
-1. **Admin → Jadwal Shift → Buat periode → Generate jadwal.** Slot *Rabu 08–10* akan ditandai kurang staff karena 9 dari 10 staff kuliah. Lihat **Log algoritma** untuk proses langkah demi langkah (bisa diunduh CSV).
+1. **Admin → Jadwal Shift → Buat periode → Generate jadwal.** Algoritma Round Robin mengisi 5 shift × 3 pos setiap hari dan melewati staff yang sedang kuliah atau sudah mencapai batas jam. Lihat **Log algoritma** untuk proses langkah demi langkah (bisa diunduh CSV).
 2. Edit manual bila perlu, lalu **Publikasikan**.
-3. **Layar QR Presensi** ditampilkan di perangkat ruang logistik; staff membuka menu **Presensi** dan memindai QR saat shift-nya berlangsung.
+3. **Layar QR Presensi** ditampilkan di perangkat ruang logistik; staff membuka menu **Presensi** dan memindai QR saat shift-nya berlangsung. Presensi berbasis **sesi** (satu shift = satu sesi, hanya satu sesi terbuka per staff): scan pertama = check-in, scan berikutnya = check-out, dan bila shift berikutnya langsung menyambung, satu scan menutup sesi lama sekaligus membuka sesi baru (pergantian sesi). Scan ganda dalam 5 menit setelah check-in diabaikan.
 4. **Penggajian → Buat periode gaji → Hitung gaji → Finalkan**, lalu ekspor Excel / unduh slip PDF.
 5. **Laporan → Keadilan Distribusi** untuk rata-rata, selisih, standar deviasi, dan koefisien variasi jam shift per staff.
 
@@ -135,7 +135,7 @@ php artisan test
 - `tests/Feature/Admin/ShiftPostTest.php` — kelola shift & pos jaga, slot per shift × pos, kapasitas pos, jadwal lama tetap terbaca setelah shift/pos dihapus
 - `tests/Unit/PayrollCalculatorTest.php` — pembulatan (per menit / 30 menit, ke bawah / terdekat), tarif berbeda per slot jam, jam hadir dibatasi jam shift, tidak hadir / belum check-out
 - `tests/Unit/AvailabilityServiceTest.php`, `SlotBuilderTest.php`, `DistributionStatsTest.php`
-- `tests/Feature/*` — autentikasi, manajemen staff, jadwal kuliah, pengaturan, tarif, generate & edit jadwal, presensi QR, penggajian, laporan
+- `tests/Feature/*` — autentikasi, manajemen staff, jadwal kuliah, pengaturan, tarif, generate & edit jadwal, presensi QR (termasuk `AttendanceSessionTest`: sesi, scan ganda, pergantian sesi shift berurutan), penggajian, laporan
 
 Frontend: `npm run lint` dan `npm run build`.
 

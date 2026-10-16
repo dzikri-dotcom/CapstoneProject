@@ -10,6 +10,7 @@ use App\Models\ShiftAssignment;
 use App\Models\ShiftSlot;
 use App\Models\StaffProfile;
 use App\Models\User;
+use Database\Seeders\TestingDatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -29,7 +30,7 @@ class ShiftPostTest extends TestCase
         parent::setUp();
 
         $this->travelTo('2026-09-24 10:00:00');
-        $this->seed();
+        $this->seed(TestingDatabaseSeeder::class);
         $this->useTwoShiftsAndThreePosts();
         Sanctum::actingAs(User::where('email', 'admin@logistik.test')->firstOrFail());
     }

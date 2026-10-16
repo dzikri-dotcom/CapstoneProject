@@ -18,9 +18,11 @@ export default defineConfig(({ mode }) => ({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
-  // Pemindai QR & grafik dimuat secara lazy; disiapkan sejak server dev menyala agar
-  // pemuatan pertamanya tidak memicu reload halaman.
+  // Halaman dimuat secara lazy, jadi Vite tidak melihat dependensinya saat start. Semua file sumber
+  // dipindai sejak server dev menyala agar dependensi tidak dioptimasi ulang di tengah jalan
+  // (yang membuat halaman lazy gagal dimuat: "Outdated Optimize Dep").
   optimizeDeps: {
+    entries: ['index.html', 'src/**/*.{js,jsx}'],
     include: ['html5-qrcode', 'recharts', 'qrcode.react'],
   },
   server: {

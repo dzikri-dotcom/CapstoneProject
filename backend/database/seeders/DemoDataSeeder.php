@@ -6,13 +6,10 @@ use App\Enums\AttendanceMethod;
 use App\Enums\AttendanceStatus;
 use App\Enums\PayrollStatus;
 use App\Enums\SchedulePeriodStatus;
-use App\Enums\UserRole;
 use App\Models\Attendance;
 use App\Models\PayrollPeriod;
 use App\Models\SchedulePeriod;
 use App\Models\ShiftAssignment;
-use App\Models\StaffProfile;
-use App\Models\User;
 use App\Services\Payroll\PayrollService;
 use App\Services\Scheduling\ScheduleGenerator;
 use App\Services\SettingService;
@@ -24,7 +21,6 @@ use Illuminate\Database\Seeder;
  *
  *   php artisan db:seed --class=DemoDataSeeder
  *
- * - 14 staff tambahan (password: password) supaya semua pos (2 orang per pos) bisa terisi.
  * - Jadwal Round Robin (shift × pos jaga) untuk minggu lalu & minggu ini (dipublikasikan)
  *   serta minggu depan (draft, untuk dicoba diedit lalu dipublikasikan).
  * - Presensi simulasi dengan pola tetap (acak ber-seed): ±80% tepat waktu, ±10% terlambat,
@@ -39,8 +35,6 @@ class DemoDataSeeder extends Seeder
     public function run(ScheduleGenerator $generator, SettingService $settings, PayrollService $payroll): void
     {
         mt_srand(2026);
-
-        $this->seedStaff();
 
         $now = now();
         $thisWeek = $now->copy()->startOfWeek(Carbon::MONDAY);
@@ -94,80 +88,6 @@ class DemoDataSeeder extends Seeder
         }
 
         $this->seedPayroll($payroll, $now);
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Staff tambahan
-    |--------------------------------------------------------------------------
-    */
-
-    private function seedStaff(): void
-    {
-        $created = 0;
-
-        foreach ($this->staff() as $index => [$name, $program, $maxWeeklyHours, $classes]) {
-            $email = str($name)->lower()->replace(' ', '.').'@logistik.test';
-            if (User::query()->where('email', $email)->exists()) {
-                continue;
-            }
-
-            $user = User::query()->create([
-                'name' => $name,
-                'email' => $email,
-                'password' => 'password',
-                'role' => UserRole::Staff,
-                'email_verified_at' => now(),
-            ]);
-
-            $profile = StaffProfile::query()->create([
-                'user_id' => $user->id,
-                'nim' => sprintf('12%02d24%04d', 1 + $index % 9, 100 + $index),
-                'phone' => sprintf('0813000002%02d', $index + 1),
-                'study_program' => $program,
-                'max_weekly_hours' => $maxWeeklyHours,
-                'is_active' => true,
-            ]);
-
-            foreach ($classes as [$day, $start, $end, $course]) {
-                $profile->classSchedules()->create([
-                    'day_of_week' => $day,
-                    'start_time' => $start,
-                    'end_time' => $end,
-                    'course_name' => $course,
-                ]);
-            }
-
-            $created++;
-        }
-
-        $this->command?->info("Staff demo: {$created} staff baru ditambahkan (total aktif ".StaffProfile::active()->count().').');
-    }
-
-    /**
-     * [nama, program studi, batas jam mingguan khusus (null = ikut batas umum), jadwal kuliah].
-     * Hari: 1 = Senin … 5 = Jumat. Jadwal sengaja ringan agar shift 4 jam masih bisa diambil.
-     *
-     * @return list<array{0:string, 1:string, 2:?int, 3:list<array{0:int, 1:string, 2:string, 3:string}>}>
-     */
-    private function staff(): array
-    {
-        return [
-            ['Ahmad Fauzi', 'S1 Teknik Logistik', null, [[1, '13:00', '15:30', 'Manajemen Persediaan'], [3, '08:00', '10:30', 'Riset Operasi']]],
-            ['Citra Lestari', 'S1 Sistem Informasi', null, [[2, '08:00', '10:30', 'Basis Data'], [4, '13:00', '15:30', 'Audit Sistem Informasi']]],
-            ['Dimas Saputra', 'S1 Informatika', null, [[1, '08:00', '10:30', 'Algoritma'], [5, '13:00', '15:30', 'Jaringan Komputer']]],
-            ['Eka Wulandari', 'S1 Bisnis Digital', null, [[2, '13:00', '15:30', 'Pemasaran Digital'], [3, '13:00', '15:30', 'Akuntansi Dasar'], [4, '08:00', '10:30', 'E-Commerce']]],
-            ['Farhan Hidayat', 'S1 Teknik Industri', null, [[3, '13:00', '15:30', 'Statistika Industri'], [5, '08:00', '10:30', 'Menggambar Teknik']]],
-            ['Gita Permata', 'S1 Sains Data', null, [[1, '10:30', '13:00', 'Probabilitas'], [4, '08:00', '10:30', 'Pembelajaran Mesin']]],
-            ['Hendra Wijaya', 'S1 Teknik Elektro', null, [[2, '08:00', '10:30', 'Rangkaian Listrik'], [5, '13:00', '15:30', 'Elektronika']]],
-            ['Intan Maharani', 'S1 Teknik Telekomunikasi', null, [[1, '13:00', '15:30', 'Sistem Komunikasi'], [3, '08:00', '10:30', 'Pengolahan Sinyal']]],
-            ['Joko Susilo', 'S1 Teknik Komputer', null, [[2, '13:00', '15:30', 'Sistem Tertanam'], [4, '13:00', '15:30', 'Arsitektur Komputer']]],
-            ['Kartika Sari', 'S1 Rekayasa Perangkat Lunak', null, [[1, '08:00', '10:30', 'Pemrograman Berorientasi Objek'], [3, '13:00', '15:30', 'Pengujian Perangkat Lunak']]],
-            ['Lukman Hakim', 'S1 Teknik Logistik', null, [[2, '08:00', '10:30', 'Manajemen Pergudangan'], [5, '08:00', '10:30', 'Simulasi Sistem']]],
-            ['Maya Puspita', 'S1 Sistem Informasi', null, [[4, '08:00', '10:30', 'Tata Kelola TI'], [5, '13:00', '15:30', 'Manajemen Proyek']]],
-            ['Naufal Akbar', 'S1 Informatika', null, [[1, '13:00', '15:30', 'Sistem Operasi'], [3, '08:00', '10:30', 'Kecerdasan Buatan']]],
-            ['Olivia Rahma', 'S1 Bisnis Digital', null, [[2, '13:00', '15:30', 'Manajemen Operasi'], [4, '13:00', '15:30', 'Kewirausahaan']]],
-        ];
     }
 
     /*

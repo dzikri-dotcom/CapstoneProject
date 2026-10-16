@@ -1,16 +1,22 @@
-import { PackageCheck } from 'lucide-react'
+import BrandMark from '@/components/BrandMark'
 import cn from '@/utils/cn'
 
+/**
+ * Logo Logistik Asset Management — Telkom University Surabaya.
+ * compact: "LOGISTIK / Asset Management" (sidebar & header HP); penuh: nama lengkap + kampus.
+ */
 export default function Logo({ compact = false, inverted = false, iconOnly = false }) {
   return (
     <div className="flex min-w-0 items-center gap-2.5">
-      <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white">
-        <PackageCheck className="size-[18px]" />
-      </div>
+      <BrandMark inverted={inverted} className="h-8 w-[30px] shrink-0" title={iconOnly ? 'Logistik Asset Management' : undefined} />
       {!iconOnly && (
         <div className="min-w-0 leading-tight">
-          <p className={cn('truncate text-sm font-semibold', inverted ? 'text-white' : 'text-slate-900')}>Presensi Logistik</p>
-          {!compact && <p className={cn('truncate text-xs', inverted ? 'text-white/50' : 'text-slate-500')}>Telkom University Surabaya</p>}
+          <p className={cn('truncate text-[13px] font-bold tracking-[0.06em] uppercase', inverted ? 'text-white' : 'text-slate-900')}>
+            {compact ? 'Logistik' : 'Logistik Asset Management'}
+          </p>
+          <p className={cn('truncate text-xs', inverted ? 'text-white/55' : 'text-slate-500')}>
+            {compact ? 'Asset Management' : 'Telkom University Surabaya'}
+          </p>
         </div>
       )}
     </div>

@@ -85,11 +85,11 @@ export function formatDuration(minutes, { short = false } = {}) {
   return parts.join(' ')
 }
 
-/** "Andi Pratama" → "AP" */
+/** "Andi Pratama" → "AP"; nama satu kata memakai dua huruf pertama: "Bintang" → "BI" */
 export function initials(name = '') {
-  return name
-    .split(' ')
-    .filter(Boolean)
+  const words = name.split(' ').filter(Boolean)
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase()
+  return words
     .slice(0, 2)
     .map((word) => word[0].toUpperCase())
     .join('')

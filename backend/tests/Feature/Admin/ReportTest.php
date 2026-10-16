@@ -9,11 +9,11 @@ use App\Models\SchedulePeriod;
 use App\Models\StaffProfile;
 use App\Models\User;
 use Carbon\Carbon;
-use Database\Seeders\HourlyRateSeeder;
 use Database\Seeders\OperationalHourSeeder;
 use Database\Seeders\SettingSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Tests\Support\LegacyHourlyRateSeeder;
 use Tests\TestCase;
 
 class ReportTest extends TestCase
@@ -33,7 +33,7 @@ class ReportTest extends TestCase
         parent::setUp();
 
         $this->travelTo('2026-09-29 11:00:00'); // Selasa
-        $this->seed([SettingSeeder::class, OperationalHourSeeder::class, HourlyRateSeeder::class]);
+        $this->seed([SettingSeeder::class, OperationalHourSeeder::class, LegacyHourlyRateSeeder::class]);
 
         [$this->andi, $this->budi, $this->citra] = collect(['Andi', 'Budi', 'Citra'])
             ->map(function ($name) {

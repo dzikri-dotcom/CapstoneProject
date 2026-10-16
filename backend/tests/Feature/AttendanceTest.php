@@ -202,7 +202,7 @@ class AttendanceTest extends TestCase
 
         $this->checkIn()
             ->assertStatus(422)
-            ->assertJsonPath('errors.attendance.0', 'Anda sudah check-in untuk shift 08:00–10:00.');
+            ->assertJsonPath('errors.attendance.0', 'Anda masih bertugas di shift 08:00–10:00. Lakukan check-out terlebih dahulu.');
     }
 
     public function test_check_out_dalam_batas_waktu(): void

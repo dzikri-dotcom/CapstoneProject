@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import LoadingScreen from '@/components/ui/LoadingScreen'
 import useAuth from '@/hooks/useAuth'
@@ -7,30 +7,31 @@ import StaffLayout from '@/layouts/StaffLayout'
 import Login from '@/pages/auth/Login'
 import NotFound from '@/pages/NotFound'
 import { ROLE_HOME } from '@/utils/constants'
+import lazyPage from '@/utils/lazyPage'
 
 // Halaman dimuat saat dibuka (code splitting), sehingga HP staff tidak perlu mengunduh halaman admin.
-const AdminDashboard = lazy(() => import('@/pages/admin/Dashboard'))
-const AttendanceMonitor = lazy(() => import('@/pages/admin/AttendanceMonitor'))
-const HourlyRates = lazy(() => import('@/pages/admin/HourlyRates'))
-const PayrollDetail = lazy(() => import('@/pages/admin/payroll/PayrollDetail'))
-const PayrollPeriods = lazy(() => import('@/pages/admin/payroll/PayrollPeriods'))
-const AttendanceReport = lazy(() => import('@/pages/admin/reports/AttendanceReport'))
-const FairnessReport = lazy(() => import('@/pages/admin/reports/FairnessReport'))
-const AdminProfile = lazy(() => import('@/pages/admin/Profile'))
-const QrDisplay = lazy(() => import('@/pages/admin/QrDisplay'))
-const ScheduleDetail = lazy(() => import('@/pages/admin/schedule/ScheduleDetail'))
-const SchedulePeriods = lazy(() => import('@/pages/admin/schedule/SchedulePeriods'))
-const SchedulerLog = lazy(() => import('@/pages/admin/schedule/SchedulerLog'))
-const Settings = lazy(() => import('@/pages/admin/Settings'))
-const StaffDetail = lazy(() => import('@/pages/admin/staff/StaffDetail'))
-const StaffList = lazy(() => import('@/pages/admin/staff/StaffList'))
-const StaffAccount = lazy(() => import('@/pages/staff/Account'))
-const StaffAttendance = lazy(() => import('@/pages/staff/Attendance'))
-const AttendanceHistory = lazy(() => import('@/pages/staff/AttendanceHistory'))
-const ClassSchedules = lazy(() => import('@/pages/staff/ClassSchedules'))
-const StaffHome = lazy(() => import('@/pages/staff/Home'))
-const StaffPayroll = lazy(() => import('@/pages/staff/Payroll'))
-const StaffShifts = lazy(() => import('@/pages/staff/Shifts'))
+const AdminDashboard = lazyPage(() => import('@/pages/admin/Dashboard'))
+const AttendanceMonitor = lazyPage(() => import('@/pages/admin/AttendanceMonitor'))
+const HourlyRates = lazyPage(() => import('@/pages/admin/HourlyRates'))
+const PayrollDetail = lazyPage(() => import('@/pages/admin/payroll/PayrollDetail'))
+const PayrollPeriods = lazyPage(() => import('@/pages/admin/payroll/PayrollPeriods'))
+const AttendanceReport = lazyPage(() => import('@/pages/admin/reports/AttendanceReport'))
+const FairnessReport = lazyPage(() => import('@/pages/admin/reports/FairnessReport'))
+const AdminProfile = lazyPage(() => import('@/pages/admin/Profile'))
+const QrDisplay = lazyPage(() => import('@/pages/admin/QrDisplay'))
+const ScheduleDetail = lazyPage(() => import('@/pages/admin/schedule/ScheduleDetail'))
+const SchedulePeriods = lazyPage(() => import('@/pages/admin/schedule/SchedulePeriods'))
+const SchedulerLog = lazyPage(() => import('@/pages/admin/schedule/SchedulerLog'))
+const Settings = lazyPage(() => import('@/pages/admin/Settings'))
+const StaffDetail = lazyPage(() => import('@/pages/admin/staff/StaffDetail'))
+const StaffList = lazyPage(() => import('@/pages/admin/staff/StaffList'))
+const StaffAccount = lazyPage(() => import('@/pages/staff/Account'))
+const StaffAttendance = lazyPage(() => import('@/pages/staff/Attendance'))
+const AttendanceHistory = lazyPage(() => import('@/pages/staff/AttendanceHistory'))
+const ClassSchedules = lazyPage(() => import('@/pages/staff/ClassSchedules'))
+const StaffHome = lazyPage(() => import('@/pages/staff/Home'))
+const StaffPayroll = lazyPage(() => import('@/pages/staff/Payroll'))
+const StaffShifts = lazyPage(() => import('@/pages/staff/Shifts'))
 import GuestRoute from './GuestRoute'
 import ProtectedRoute from './ProtectedRoute'
 

@@ -27,6 +27,15 @@ export async function getMyAttendanceStatus() {
   return data.data
 }
 
+/**
+ * Satu scan QR: server menentukan check-in, check-out, atau pergantian sesi.
+ * { message, action: 'check_in' | 'check_out' | 'handover', data: status terbaru }
+ */
+export async function scanAttendance(token) {
+  const { data } = await api.post('/staff/attendance/scan', { token })
+  return data
+}
+
 export async function checkIn(token) {
   const { data } = await api.post('/staff/attendance/check-in', { token })
   return data

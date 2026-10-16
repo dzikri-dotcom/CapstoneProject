@@ -11,6 +11,7 @@ use App\Models\ShiftAssignment;
 use App\Models\ShiftSlot;
 use App\Models\StaffProfile;
 use App\Models\User;
+use Database\Seeders\TestingDatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -32,7 +33,7 @@ class ScheduleGenerationTest extends TestCase
         parent::setUp();
 
         $this->travelTo('2026-09-24 10:00:00');
-        $this->seed();
+        $this->seed(TestingDatabaseSeeder::class);
         $this->useTwoHourShiftsWithOnePost();
         // Angka harapan di kelas ini dihitung dengan batas 12 jam per minggu.
         Setting::query()->updateOrCreate(['key' => 'max_weekly_hours'], ['value' => '12', 'type' => 'integer']);

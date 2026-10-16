@@ -95,11 +95,11 @@ export default function AttendanceMonitor() {
               onClick={() => setFilter(item.key)}
               className={cn(
                 'rounded-full px-3 py-1.5 text-sm font-medium ring-1 transition',
-                filter === item.key ? 'bg-slate-900 text-white ring-slate-900' : 'bg-white text-slate-600 ring-slate-200 hover:ring-slate-400',
+                filter === item.key ? 'bg-brand-50 text-brand-700 ring-brand-200' : 'bg-white text-slate-600 ring-slate-200 hover:ring-slate-300',
               )}
             >
               {item.label}
-              <span className={cn('ml-1.5 tabular-nums', filter === item.key ? 'text-white/70' : 'text-slate-400')}>
+              <span className={cn('ml-1.5 tabular-nums', filter === item.key ? 'text-brand-600/70' : 'text-slate-400')}>
                 {summary[item.key]}
               </span>
             </button>

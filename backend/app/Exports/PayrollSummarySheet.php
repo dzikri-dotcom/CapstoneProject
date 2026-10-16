@@ -35,7 +35,7 @@ class PayrollSummarySheet implements FromArray, ShouldAutoSize, WithColumnFormat
             ['Rekap Gaji Student Staff Logistik — Telkom University Surabaya'],
             ['Periode', $this->period->start_date->translatedFormat('j F Y').' s.d. '.$this->period->end_date->translatedFormat('j F Y')],
             ['Status', $this->period->status->label()],
-            ['Pembulatan', PayrollSheetHelper::roundingLabel($snapshot)],
+            ['Aturan gaji', PayrollSheetHelper::roundingLabel($snapshot)],
             [],
             ['No', 'Nama', 'NIM', 'Program Studi', 'Shift Hadir', 'Tidak Hadir', 'Total Jam Dibayar', 'Total Gaji (Rp)'],
         ];

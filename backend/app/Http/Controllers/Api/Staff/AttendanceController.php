@@ -30,6 +30,20 @@ class AttendanceController extends Controller
         return response()->json(['data' => $this->attendance->statusFor($request->user()->staffProfile)]);
     }
 
+    /**
+     * Satu scan QR: sistem menentukan check-in, check-out, atau pergantian sesi berdasarkan sesi staff.
+     */
+    public function scan(AttendanceTokenRequest $request): JsonResponse
+    {
+        $result = $this->attendance->scan($request->user()->staffProfile, $request->validated('token'));
+
+        return response()->json([
+            'message' => $result['message'],
+            'action' => $result['action'],
+            'data' => $this->attendance->statusFor($request->user()->staffProfile),
+        ]);
+    }
+
     public function checkIn(AttendanceTokenRequest $request): JsonResponse
     {
         $record = $this->attendance->checkIn($request->user()->staffProfile, $request->validated('token'));

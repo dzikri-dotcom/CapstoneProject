@@ -163,7 +163,10 @@ export default function QrDisplay() {
                     <ul className="mt-2 space-y-2">
                       {group.members.map((member) => (
                         <li key={member.assignment_id} className="flex items-center justify-between gap-3">
-                          <span className="font-medium">{member.staff?.name}</span>
+                          <span className="min-w-0">
+                            <span className="block truncate font-medium">{member.staff?.name}</span>
+                            {member.post_name && <span className="block text-xs text-slate-500">{member.post_name}</span>}
+                          </span>
                           <span className="flex items-center gap-2 text-xs text-slate-500">
                             {member.attendance?.check_in_time && <span className="tabular-nums">{member.attendance.check_in_time}</span>}
                             <AttendanceBadges item={member} />
